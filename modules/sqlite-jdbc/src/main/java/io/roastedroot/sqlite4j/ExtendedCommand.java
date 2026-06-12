@@ -13,6 +13,8 @@ import io.roastedroot.sqlite4j.core.DB;
 import java.sql.SQLException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * parsing SQLite specific extension of SQL command
@@ -21,7 +23,7 @@ import java.util.regex.Pattern;
  */
 public class ExtendedCommand {
     public static interface SQLExtension {
-        public void execute(DB db) throws SQLException;
+        public void execute(@NonNull DB db) throws SQLException;
     }
 
     /**
@@ -34,7 +36,7 @@ public class ExtendedCommand {
      *     the argument is a restore command;
      * @throws SQLException
      */
-    public static SQLExtension parse(String sql) throws SQLException {
+    public static @Nullable SQLExtension parse(@Nullable String sql) throws SQLException {
         if (sql == null) return null;
         if (sql.length() > 5 && sql.substring(0, 6).toLowerCase().equals("backup"))
             return BackupCommand.parse(sql);
@@ -50,7 +52,7 @@ public class ExtendedCommand {
      * @param s String with quotation mark.
      * @return String with quotation mark removed.
      */
-    public static String removeQuotation(String s) {
+    public static @Nullable String removeQuotation(@Nullable String s) {
         if (s == null) return s;
 
         if ((s.startsWith("\"") && s.endsWith("\"")) || (s.startsWith("'") && s.endsWith("'")))
@@ -59,8 +61,8 @@ public class ExtendedCommand {
     }
 
     public static class BackupCommand implements SQLExtension {
-        public final String srcDB;
-        public final String destFile;
+        public final @NonNull String srcDB;
+        public final @NonNull String destFile;
 
         /**
          * Constructs a BackupCommand instance that backup the database to a target file.
@@ -68,12 +70,12 @@ public class ExtendedCommand {
          * @param srcDB Source database name.
          * @param destFile Target file name.
          */
-        public BackupCommand(String srcDB, String destFile) {
+        public BackupCommand(@NonNull String srcDB, @NonNull String destFile) {
             this.srcDB = srcDB;
             this.destFile = destFile;
         }
 
-        private static Pattern backupCmd =
+        private static @NonNull Pattern backupCmd =
                 Pattern.compile(
                         "backup(\\s+(\"[^\"]*\"|'[^\']*\'|\\S+))?\\s+to\\s+(\"[^\"]*\"|'[^\']*\'|\\S+)",
                         Pattern.CASE_INSENSITIVE);
@@ -85,7 +87,7 @@ public class ExtendedCommand {
          * @return BackupCommand object.
          * @throws SQLException
          */
-        public static BackupCommand parse(String sql) throws SQLException {
+        public static BackupCommand parse(@Nullable String sql) throws SQLException {
             if (sql != null) {
                 Matcher m = backupCmd.matcher(sql);
                 if (m.matches()) {
@@ -109,9 +111,9 @@ public class ExtendedCommand {
     }
 
     public static class RestoreCommand implements SQLExtension {
-        public final String targetDB;
-        public final String srcFile;
-        private static Pattern restoreCmd =
+        public final @NonNull String targetDB;
+        public final @NonNull String srcFile;
+        private static @NonNull Pattern restoreCmd =
                 Pattern.compile(
                         "restore(\\s+(\"[^\"]*\"|'[^\']*\'|\\S+))?\\s+from\\s+(\"[^\"]*\"|'[^\']*\'|\\S+)",
                         Pattern.CASE_INSENSITIVE);
@@ -122,7 +124,7 @@ public class ExtendedCommand {
          * @param targetDB Target database name
          * @param srcFile Source file name
          */
-        public RestoreCommand(String targetDB, String srcFile) {
+        public RestoreCommand(@NonNull String targetDB, @NonNull String srcFile) {
             this.targetDB = targetDB;
             this.srcFile = srcFile;
         }
@@ -134,7 +136,7 @@ public class ExtendedCommand {
          * @return RestoreCommand object.
          * @throws SQLException
          */
-        public static RestoreCommand parse(String sql) throws SQLException {
+        public static RestoreCommand parse(@Nullable String sql) throws SQLException {
             if (sql != null) {
                 Matcher m = restoreCmd.matcher(sql);
                 if (m.matches()) {

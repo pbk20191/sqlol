@@ -29,10 +29,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Map;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultSetMetaData {
 
-    public JDBC4ResultSet(CoreStatement stmt) {
+    public JDBC4ResultSet(@NonNull CoreStatement stmt) {
         super(stmt);
     }
 
@@ -51,11 +53,11 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
     }
 
     // JDBC 4
-    public <T> T unwrap(Class<T> iface) throws ClassCastException {
+    public <T> T unwrap(@NonNull Class<T> iface) throws ClassCastException {
         return iface.cast(this);
     }
 
-    public boolean isWrapperFor(Class<?> iface) {
+    public boolean isWrapperFor(@NonNull Class<?> iface) {
         return iface.isInstance(this);
     }
 
@@ -64,17 +66,17 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         throw new SQLFeatureNotSupportedException();
     }
 
-    public RowId getRowId(String columnLabel) throws SQLException {
+    public RowId getRowId(@NonNull String columnLabel) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateRowId(int columnIndex, RowId x) throws SQLException {
+    public void updateRowId(int columnIndex, @NonNull RowId x) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateRowId(String columnLabel, RowId x) throws SQLException {
+    public void updateRowId(@NonNull String columnLabel, @NonNull RowId x) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
@@ -88,22 +90,22 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         return !isOpen();
     }
 
-    public void updateNString(int columnIndex, String nString) throws SQLException {
+    public void updateNString(int columnIndex, @NonNull String nString) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateNString(String columnLabel, String nString) throws SQLException {
+    public void updateNString(@NonNull String columnLabel, @NonNull String nString) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateNClob(int columnIndex, NClob nClob) throws SQLException {
+    public void updateNClob(int columnIndex, @NonNull NClob nClob) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateNClob(String columnLabel, NClob nClob) throws SQLException {
+    public void updateNClob(@NonNull String columnLabel, @NonNull NClob nClob) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
@@ -113,7 +115,7 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         throw new SQLFeatureNotSupportedException();
     }
 
-    public NClob getNClob(String columnLabel) throws SQLException {
+    public NClob getNClob(@NonNull String columnLabel) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
@@ -123,17 +125,17 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         throw new SQLFeatureNotSupportedException();
     }
 
-    public SQLXML getSQLXML(String columnLabel) throws SQLException {
+    public SQLXML getSQLXML(@NonNull String columnLabel) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateSQLXML(int columnIndex, SQLXML xmlObject) throws SQLException {
+    public void updateSQLXML(int columnIndex, @NonNull SQLXML xmlObject) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateSQLXML(String columnLabel, SQLXML xmlObject) throws SQLException {
+    public void updateSQLXML(@NonNull String columnLabel, @NonNull SQLXML xmlObject) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
@@ -143,17 +145,17 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         throw new SQLFeatureNotSupportedException();
     }
 
-    public String getNString(String columnLabel) throws SQLException {
+    public String getNString(@NonNull String columnLabel) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public Reader getNCharacterStream(int col) throws SQLException {
+    public @Nullable Reader getNCharacterStream(int col) throws SQLException {
         String data = getString(col);
         return getNCharacterStreamInternal(data);
     }
 
-    private Reader getNCharacterStreamInternal(String data) {
+    private @Nullable Reader getNCharacterStreamInternal(@Nullable String data) {
         if (data == null) {
             return null;
         }
@@ -161,159 +163,159 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         return reader;
     }
 
-    public Reader getNCharacterStream(String col) throws SQLException {
+    public @Nullable Reader getNCharacterStream(@NonNull String col) throws SQLException {
         String data = getString(col);
         return getNCharacterStreamInternal(data);
     }
 
-    public void updateNCharacterStream(int columnIndex, Reader x, long length) throws SQLException {
+    public void updateNCharacterStream(int columnIndex, @NonNull Reader x, long length) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateNCharacterStream(String columnLabel, Reader reader, long length)
+    public void updateNCharacterStream(@NonNull String columnLabel, @NonNull Reader reader, long length)
             throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateAsciiStream(int columnIndex, InputStream x, long length) throws SQLException {
+    public void updateAsciiStream(int columnIndex, @NonNull InputStream x, long length) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateBinaryStream(int columnIndex, InputStream x, long length)
+    public void updateBinaryStream(int columnIndex, @NonNull InputStream x, long length)
             throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateCharacterStream(int columnIndex, Reader x, long length) throws SQLException {
+    public void updateCharacterStream(int columnIndex, @NonNull Reader x, long length) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateAsciiStream(String columnLabel, InputStream x, long length)
+    public void updateAsciiStream(@NonNull String columnLabel, @NonNull InputStream x, long length)
             throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateBinaryStream(String columnLabel, InputStream x, long length)
+    public void updateBinaryStream(@NonNull String columnLabel, @NonNull InputStream x, long length)
             throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateCharacterStream(String columnLabel, Reader reader, long length)
+    public void updateCharacterStream(@NonNull String columnLabel, @NonNull Reader reader, long length)
             throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateBlob(int columnIndex, InputStream inputStream, long length)
+    public void updateBlob(int columnIndex, @NonNull InputStream inputStream, long length)
             throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateBlob(String columnLabel, InputStream inputStream, long length)
+    public void updateBlob(@NonNull String columnLabel, @NonNull InputStream inputStream, long length)
             throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateClob(int columnIndex, Reader reader, long length) throws SQLException {
+    public void updateClob(int columnIndex, @NonNull Reader reader, long length) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateClob(String columnLabel, Reader reader, long length) throws SQLException {
+    public void updateClob(@NonNull String columnLabel, @NonNull Reader reader, long length) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateNClob(int columnIndex, Reader reader, long length) throws SQLException {
+    public void updateNClob(int columnIndex, @NonNull Reader reader, long length) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateNClob(String columnLabel, Reader reader, long length) throws SQLException {
+    public void updateNClob(@NonNull String columnLabel, @NonNull Reader reader, long length) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateNCharacterStream(int columnIndex, Reader x) throws SQLException {
+    public void updateNCharacterStream(int columnIndex, @NonNull Reader x) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateNCharacterStream(String columnLabel, Reader reader) throws SQLException {
+    public void updateNCharacterStream(@NonNull String columnLabel, @NonNull Reader reader) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateAsciiStream(int columnIndex, InputStream x) throws SQLException {
+    public void updateAsciiStream(int columnIndex, @NonNull InputStream x) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateBinaryStream(int columnIndex, InputStream x) throws SQLException {
+    public void updateBinaryStream(int columnIndex, @NonNull InputStream x) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateCharacterStream(int columnIndex, Reader x) throws SQLException {
+    public void updateCharacterStream(int columnIndex, @NonNull Reader x) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateAsciiStream(String columnLabel, InputStream x) throws SQLException {
+    public void updateAsciiStream(@NonNull String columnLabel, @NonNull InputStream x) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateBinaryStream(String columnLabel, InputStream x) throws SQLException {
+    public void updateBinaryStream(@NonNull String columnLabel, @NonNull InputStream x) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateCharacterStream(String columnLabel, Reader reader) throws SQLException {
+    public void updateCharacterStream(@NonNull String columnLabel, @NonNull Reader reader) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateBlob(int columnIndex, InputStream inputStream) throws SQLException {
+    public void updateBlob(int columnIndex, @NonNull InputStream inputStream) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateBlob(String columnLabel, InputStream inputStream) throws SQLException {
+    public void updateBlob(@NonNull String columnLabel, @NonNull InputStream inputStream) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateClob(int columnIndex, Reader reader) throws SQLException {
+    public void updateClob(int columnIndex, @NonNull Reader reader) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateClob(String columnLabel, Reader reader) throws SQLException {
+    public void updateClob(@NonNull String columnLabel, @NonNull Reader reader) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateNClob(int columnIndex, Reader reader) throws SQLException {
+    public void updateNClob(int columnIndex, @NonNull Reader reader) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public void updateNClob(String columnLabel, Reader reader) throws SQLException {
+    public void updateNClob(@NonNull String columnLabel, @NonNull Reader reader) throws SQLException {
         // TODO Support this
         throw new SQLFeatureNotSupportedException();
     }
 
-    public <T> T getObject(int columnIndex, Class<T> type) throws SQLException {
+    public <T> @Nullable T getObject(int columnIndex, @NonNull Class<T> type) throws SQLException {
         if (type == null) throw new SQLException("requested type cannot be null");
         if (type == String.class) return type.cast(getString(columnIndex));
         if (type == Boolean.class) return type.cast(getBoolean(columnIndex));
@@ -380,7 +382,7 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         throw unsupported();
     }
 
-    public <T> T getObject(String columnLabel, Class<T> type) throws SQLException {
+    public <T> @Nullable T getObject(@NonNull String columnLabel, @NonNull Class<T> type) throws SQLException {
         return getObject(findColumn(columnLabel), type);
     }
 
@@ -394,21 +396,21 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         throw unsupported();
     }
 
-    public Array getArray(String col) throws SQLException {
+    public Array getArray(@NonNull String col) throws SQLException {
         throw unsupported();
     }
 
-    public InputStream getAsciiStream(int col) throws SQLException {
+    public @Nullable InputStream getAsciiStream(int col) throws SQLException {
         String data = getString(col);
         return getAsciiStreamInternal(data);
     }
 
-    public InputStream getAsciiStream(String col) throws SQLException {
+    public @Nullable InputStream getAsciiStream(@NonNull String col) throws SQLException {
         String data = getString(col);
         return getAsciiStreamInternal(data);
     }
 
-    private InputStream getAsciiStreamInternal(String data) {
+    private @Nullable InputStream getAsciiStreamInternal(@Nullable String data) {
         if (data == null) {
             return null;
         }
@@ -427,7 +429,7 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
     }
 
     @Deprecated
-    public BigDecimal getBigDecimal(String col, int s) throws SQLException {
+    public BigDecimal getBigDecimal(@NonNull String col, int s) throws SQLException {
         throw unsupported();
     }
 
@@ -435,27 +437,27 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         throw unsupported();
     }
 
-    public Blob getBlob(String col) throws SQLException {
+    public Blob getBlob(@NonNull String col) throws SQLException {
         throw unsupported();
     }
 
-    public Clob getClob(int col) throws SQLException {
+    public @Nullable Clob getClob(int col) throws SQLException {
         String clob = getString(col);
         return clob == null ? null : new SqliteClob(clob);
     }
 
-    public Clob getClob(String col) throws SQLException {
+    public @Nullable Clob getClob(@NonNull String col) throws SQLException {
         String clob = getString(col);
         return clob == null ? null : new SqliteClob(clob);
     }
 
     @SuppressWarnings("rawtypes")
-    public Object getObject(int col, Map map) throws SQLException {
+    public Object getObject(int col, @NonNull Map map) throws SQLException {
         throw unsupported();
     }
 
     @SuppressWarnings("rawtypes")
-    public Object getObject(String col, Map map) throws SQLException {
+    public Object getObject(@NonNull String col, @NonNull Map map) throws SQLException {
         throw unsupported();
     }
 
@@ -463,15 +465,15 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         throw unsupported();
     }
 
-    public Ref getRef(String col) throws SQLException {
+    public Ref getRef(@NonNull String col) throws SQLException {
         throw unsupported();
     }
 
-    public InputStream getUnicodeStream(int col) throws SQLException {
+    public @Nullable InputStream getUnicodeStream(int col) throws SQLException {
         return getAsciiStream(col);
     }
 
-    public InputStream getUnicodeStream(String col) throws SQLException {
+    public @Nullable InputStream getUnicodeStream(@NonNull String col) throws SQLException {
         return getAsciiStream(col);
     }
 
@@ -479,7 +481,7 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         throw unsupported();
     }
 
-    public URL getURL(String col) throws SQLException {
+    public URL getURL(@NonNull String col) throws SQLException {
         throw unsupported();
     }
 
@@ -531,43 +533,43 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         throw unsupported();
     }
 
-    public void updateArray(int col, Array x) throws SQLException {
+    public void updateArray(int col, @NonNull Array x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateArray(String col, Array x) throws SQLException {
+    public void updateArray(@NonNull String col, @NonNull Array x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateAsciiStream(int col, InputStream x, int l) throws SQLException {
+    public void updateAsciiStream(int col, @NonNull InputStream x, int l) throws SQLException {
         throw unsupported();
     }
 
-    public void updateAsciiStream(String col, InputStream x, int l) throws SQLException {
+    public void updateAsciiStream(@NonNull String col, @NonNull InputStream x, int l) throws SQLException {
         throw unsupported();
     }
 
-    public void updateBigDecimal(int col, BigDecimal x) throws SQLException {
+    public void updateBigDecimal(int col, @NonNull BigDecimal x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateBigDecimal(String col, BigDecimal x) throws SQLException {
+    public void updateBigDecimal(@NonNull String col, @NonNull BigDecimal x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateBinaryStream(int c, InputStream x, int l) throws SQLException {
+    public void updateBinaryStream(int c, @NonNull InputStream x, int l) throws SQLException {
         throw unsupported();
     }
 
-    public void updateBinaryStream(String c, InputStream x, int l) throws SQLException {
+    public void updateBinaryStream(@NonNull String c, @NonNull InputStream x, int l) throws SQLException {
         throw unsupported();
     }
 
-    public void updateBlob(int col, Blob x) throws SQLException {
+    public void updateBlob(int col, @NonNull Blob x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateBlob(String col, Blob x) throws SQLException {
+    public void updateBlob(@NonNull String col, @NonNull Blob x) throws SQLException {
         throw unsupported();
     }
 
@@ -575,7 +577,7 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         throw unsupported();
     }
 
-    public void updateBoolean(String col, boolean x) throws SQLException {
+    public void updateBoolean(@NonNull String col, boolean x) throws SQLException {
         throw unsupported();
     }
 
@@ -583,39 +585,39 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         throw unsupported();
     }
 
-    public void updateByte(String col, byte x) throws SQLException {
+    public void updateByte(@NonNull String col, byte x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateBytes(int col, byte[] x) throws SQLException {
+    public void updateBytes(int col, byte @NonNull [] x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateBytes(String col, byte[] x) throws SQLException {
+    public void updateBytes(@NonNull String col, byte @NonNull [] x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateCharacterStream(int c, Reader x, int l) throws SQLException {
+    public void updateCharacterStream(int c, @NonNull Reader x, int l) throws SQLException {
         throw unsupported();
     }
 
-    public void updateCharacterStream(String c, Reader r, int l) throws SQLException {
+    public void updateCharacterStream(@NonNull String c, @NonNull Reader r, int l) throws SQLException {
         throw unsupported();
     }
 
-    public void updateClob(int col, Clob x) throws SQLException {
+    public void updateClob(int col, @NonNull Clob x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateClob(String col, Clob x) throws SQLException {
+    public void updateClob(@NonNull String col, @NonNull Clob x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateDate(int col, Date x) throws SQLException {
+    public void updateDate(int col, @NonNull Date x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateDate(String col, Date x) throws SQLException {
+    public void updateDate(@NonNull String col, @NonNull Date x) throws SQLException {
         throw unsupported();
     }
 
@@ -623,7 +625,7 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         throw unsupported();
     }
 
-    public void updateDouble(String col, double x) throws SQLException {
+    public void updateDouble(@NonNull String col, double x) throws SQLException {
         throw unsupported();
     }
 
@@ -631,7 +633,7 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         throw unsupported();
     }
 
-    public void updateFloat(String col, float x) throws SQLException {
+    public void updateFloat(@NonNull String col, float x) throws SQLException {
         throw unsupported();
     }
 
@@ -639,7 +641,7 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         throw unsupported();
     }
 
-    public void updateInt(String col, int x) throws SQLException {
+    public void updateInt(@NonNull String col, int x) throws SQLException {
         throw unsupported();
     }
 
@@ -647,7 +649,7 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         throw unsupported();
     }
 
-    public void updateLong(String col, long x) throws SQLException {
+    public void updateLong(@NonNull String col, long x) throws SQLException {
         throw unsupported();
     }
 
@@ -655,31 +657,31 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         throw unsupported();
     }
 
-    public void updateNull(String col) throws SQLException {
+    public void updateNull(@NonNull String col) throws SQLException {
         throw unsupported();
     }
 
-    public void updateObject(int c, Object x) throws SQLException {
+    public void updateObject(int c, @NonNull Object x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateObject(int c, Object x, int s) throws SQLException {
+    public void updateObject(int c, @NonNull Object x, int s) throws SQLException {
         throw unsupported();
     }
 
-    public void updateObject(String col, Object x) throws SQLException {
+    public void updateObject(@NonNull String col, @NonNull Object x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateObject(String c, Object x, int s) throws SQLException {
+    public void updateObject(@NonNull String c, @NonNull Object x, int s) throws SQLException {
         throw unsupported();
     }
 
-    public void updateRef(int col, Ref x) throws SQLException {
+    public void updateRef(int col, @NonNull Ref x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateRef(String c, Ref x) throws SQLException {
+    public void updateRef(@NonNull String c, @NonNull Ref x) throws SQLException {
         throw unsupported();
     }
 
@@ -691,31 +693,31 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         throw unsupported();
     }
 
-    public void updateShort(String c, short x) throws SQLException {
+    public void updateShort(@NonNull String c, short x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateString(int c, String x) throws SQLException {
+    public void updateString(int c, @NonNull String x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateString(String c, String x) throws SQLException {
+    public void updateString(@NonNull String c, @NonNull String x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateTime(int c, Time x) throws SQLException {
+    public void updateTime(int c, @NonNull Time x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateTime(String c, Time x) throws SQLException {
+    public void updateTime(@NonNull String c, @NonNull Time x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateTimestamp(int c, Timestamp x) throws SQLException {
+    public void updateTimestamp(int c, @NonNull Timestamp x) throws SQLException {
         throw unsupported();
     }
 
-    public void updateTimestamp(String c, Timestamp x) throws SQLException {
+    public void updateTimestamp(@NonNull String c, @NonNull Timestamp x) throws SQLException {
         throw unsupported();
     }
 
@@ -725,9 +727,9 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
 
     class SqliteClob implements NClob {
 
-        private String data;
+        private @Nullable String data;
 
-        protected SqliteClob(String data) {
+        protected SqliteClob(@NonNull String data) {
             this.data = data;
         }
 
@@ -735,15 +737,15 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
             data = null;
         }
 
-        public InputStream getAsciiStream() throws SQLException {
+        public @Nullable InputStream getAsciiStream() throws SQLException {
             return getAsciiStreamInternal(data);
         }
 
-        public Reader getCharacterStream() throws SQLException {
+        public @Nullable Reader getCharacterStream() throws SQLException {
             return getNCharacterStreamInternal(data);
         }
 
-        public Reader getCharacterStream(long arg0, long arg1) throws SQLException {
+        public @Nullable Reader getCharacterStream(long arg0, long arg1) throws SQLException {
             return getNCharacterStreamInternal(data);
         }
 
@@ -768,32 +770,32 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
             return data.length();
         }
 
-        public long position(String arg0, long arg1) throws SQLException {
+        public long position(@NonNull String arg0, long arg1) throws SQLException {
             unsupported();
             return -1;
         }
 
-        public long position(Clob arg0, long arg1) throws SQLException {
+        public long position(@NonNull Clob arg0, long arg1) throws SQLException {
             unsupported();
             return -1;
         }
 
-        public OutputStream setAsciiStream(long arg0) throws SQLException {
+        public @Nullable OutputStream setAsciiStream(long arg0) throws SQLException {
             unsupported();
             return null;
         }
 
-        public Writer setCharacterStream(long arg0) throws SQLException {
+        public @Nullable Writer setCharacterStream(long arg0) throws SQLException {
             unsupported();
             return null;
         }
 
-        public int setString(long arg0, String arg1) throws SQLException {
+        public int setString(long arg0, @NonNull String arg1) throws SQLException {
             unsupported();
             return -1;
         }
 
-        public int setString(long arg0, String arg1, int arg2, int arg3) throws SQLException {
+        public int setString(long arg0, @NonNull String arg1, int arg2, int arg3) throws SQLException {
             unsupported();
             return -1;
         }

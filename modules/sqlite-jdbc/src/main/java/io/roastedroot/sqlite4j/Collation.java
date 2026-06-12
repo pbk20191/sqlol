@@ -19,6 +19,8 @@ import io.roastedroot.sqlite4j.core.Codes;
 import io.roastedroot.sqlite4j.core.DB;
 import java.sql.Connection;
 import java.sql.SQLException;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Provides an interface for creating SQLite user-defined collations.
@@ -42,8 +44,8 @@ import java.sql.SQLException;
  *  </pre>
  */
 public abstract class Collation {
-    private SQLiteConnection conn;
-    private DB db;
+    private @Nullable SQLiteConnection conn;
+    private @Nullable DB db;
 
     /**
      * Registers a given collation with the connection.
@@ -52,7 +54,9 @@ public abstract class Collation {
      * @param name The name of the collation.
      * @param f The collation to register.
      */
-    public static final void create(Connection conn, String name, Collation f) throws SQLException {
+    public static final void create(
+            @NonNull Connection conn, @NonNull String name, @NonNull Collation f)
+            throws SQLException {
         if (conn == null || !(conn instanceof SQLiteConnection)) {
             throw new SQLException("connection must be to an SQLite db");
         }
@@ -75,7 +79,8 @@ public abstract class Collation {
      * @param name The name of the collation.
      * @throws SQLException
      */
-    public static final void destroy(Connection conn, String name) throws SQLException {
+    public static final void destroy(@NonNull Connection conn, @NonNull String name)
+            throws SQLException {
         if (conn == null || !(conn instanceof SQLiteConnection)) {
             throw new SQLException("connection must be to an SQLite db");
         }
@@ -90,5 +95,5 @@ public abstract class Collation {
      * @return an integer that is negative, zero, or positive if the first string is less than,
      *     equal to, or greater than the second, respectively
      */
-    public abstract int xCompare(String str1, String str2);
+    public abstract int xCompare(@NonNull String str1, @NonNull String str2);
 }

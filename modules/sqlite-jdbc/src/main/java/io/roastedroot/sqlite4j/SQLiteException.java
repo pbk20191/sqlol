@@ -25,11 +25,12 @@
 package io.roastedroot.sqlite4j;
 
 import java.sql.SQLException;
+import org.jspecify.annotations.NonNull;
 
 public class SQLiteException extends SQLException {
-    private SQLiteErrorCode resultCode;
+    private @NonNull SQLiteErrorCode resultCode;
 
-    public SQLiteException(String message, SQLiteErrorCode resultCode) {
+    public SQLiteException(@NonNull String message, @NonNull SQLiteErrorCode resultCode) {
         super(message, null, resultCode.code & 0xff);
         this.resultCode = resultCode;
     }

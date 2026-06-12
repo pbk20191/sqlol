@@ -26,6 +26,8 @@ import java.sql.Date;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Calendar;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 public abstract class CorePreparedStatement extends JDBC4Statement {
     protected int columnCount;
@@ -39,7 +41,8 @@ public abstract class CorePreparedStatement extends JDBC4Statement {
      * @param sql The SQL script to prepare.
      * @throws SQLException
      */
-    protected CorePreparedStatement(SQLiteConnection conn, String sql) throws SQLException {
+    protected CorePreparedStatement(@NonNull SQLiteConnection conn, @NonNull String sql)
+            throws SQLException {
         super(conn);
 
         this.sql = sql;
@@ -104,7 +107,7 @@ public abstract class CorePreparedStatement extends JDBC4Statement {
      * @param value
      * @throws SQLException
      */
-    protected void batch(int pos, Object value) throws SQLException {
+    protected void batch(int pos, @Nullable Object value) throws SQLException {
         checkOpen();
         if (batch == null) {
             batch = new Object[paramCount];
@@ -113,7 +116,7 @@ public abstract class CorePreparedStatement extends JDBC4Statement {
     }
 
     /** Store the date in the user's preferred format (text, int, or real) */
-    protected void setDateByMilliseconds(int pos, Long value, Calendar calendar)
+    protected void setDateByMilliseconds(int pos, @NonNull Long value, @NonNull Calendar calendar)
             throws SQLException {
         SQLiteConnectionConfig config = conn.getConnectionConfig();
         switch (config.getDateClass()) {

@@ -2,6 +2,7 @@ package io.roastedroot.sqlite4j.util;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import org.jspecify.annotations.NonNull;
 
 public class QueryUtils {
     /**
@@ -11,7 +12,7 @@ public class QueryUtils {
      * @param valuesList values to return as rows
      * @return SQL query as string
      */
-    public static String valuesQuery(List<String> columns, List<List<Object>> valuesList) {
+    public static String valuesQuery(@NonNull List<String> columns, @NonNull List<List<Object>> valuesList) {
         valuesList.forEach(
                 (list) -> {
                     if (list.size() != columns.size())

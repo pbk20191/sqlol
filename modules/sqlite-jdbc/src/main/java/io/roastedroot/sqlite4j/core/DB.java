@@ -31,6 +31,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /*
  * This class is the interface to SQLite. It provides some helper functions
@@ -45,27 +47,28 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * The subclass, NativeDB, provides the actual access to SQLite functions.
  */
 public abstract class DB implements Codes {
-    private final String url;
-    private final String fileName;
-    private final SQLiteConfig config;
-    private final AtomicBoolean closed = new AtomicBoolean(true);
+    private final @NonNull String url;
+    private final @NonNull String fileName;
+    private final @NonNull SQLiteConfig config;
+    private final @NonNull AtomicBoolean closed = new AtomicBoolean(true);
 
     /** The "begin;"and "commit;" statement handles. */
-    volatile SafeStmtPtr begin;
+    volatile @Nullable SafeStmtPtr begin;
 
-    volatile SafeStmtPtr commit;
+    volatile @Nullable SafeStmtPtr commit;
 
     /** Tracer for statements to avoid unfinalized statements on db close. */
-    private final Set<SafeStmtPtr> stmts = ConcurrentHashMap.newKeySet();
+    private final @NonNull Set<SafeStmtPtr> stmts = ConcurrentHashMap.newKeySet();
 
     // [벤더링 패치] COW: onUpdate/onCommit 은 워커 스레드의 훅 콜백에서 불린다 — 모니터 금지
     // (caller 가 DB synchronized 안에서 step 결과를 기다리는 동안 콜백이 모니터를 기다리면 데드락)
-    protected final Set<SQLiteUpdateListener> updateListeners =
+    protected final @NonNull Set<SQLiteUpdateListener> updateListeners =
             new java.util.concurrent.CopyOnWriteArraySet<>();
-    protected final Set<SQLiteCommitListener> commitListeners =
+    protected final @NonNull Set<SQLiteCommitListener> commitListeners =
             new java.util.concurrent.CopyOnWriteArraySet<>();
 
-    public DB(String url, String fileName, SQLiteConfig config) throws SQLException {
+    public DB(@NonNull String url, @NonNull String fileName, @NonNull SQLiteConfig config)
+            throws SQLException {
         this.url = url;
         this.fileName = fileName;
         this.config = config;
@@ -114,7 +117,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/busy_handler.html">https://www.sqlite.org/c3ref/busy_timeout.html</a>
      */
-    public abstract void busy_handler(BusyHandler busyHandler) throws SQLException;
+    public abstract void busy_handler(@Nullable BusyHandler busyHandler) throws SQLException;
 
     /**
      * Return English-language text that describes the error as either UTF-8 or UTF-16.
@@ -189,7 +192,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/exec.html">https://www.sqlite.org/c3ref/exec.html</a>
      */
-    public final synchronized void exec(String sql, boolean autoCommit) throws SQLException {
+    public final synchronized void exec(@NonNull String sql, boolean autoCommit) throws SQLException {
         SafeStmtPtr pointer = prepare(sql);
         try {
             int rc = pointer.safeRunInt(DB::step);
@@ -217,7 +220,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/open.html">https://www.sqlite.org/c3ref/open.html</a>
      */
-    public final synchronized void open(String file, int openFlags) throws SQLException {
+    public final synchronized void open(@NonNull String file, int openFlags) throws SQLException {
         _open(file, openFlags);
         closed.set(false);
 
@@ -259,7 +262,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/prepare.html">https://www.sqlite.org/c3ref/prepare.html</a>
      */
-    public final synchronized void prepare(CoreStatement stmt) throws SQLException {
+    public final synchronized void prepare(@NonNull CoreStatement stmt) throws SQLException {
         if (stmt.sql == null) {
             throw new NullPointerException();
         }
@@ -283,7 +286,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/finalize.html">https://www.sqlite.org/c3ref/finalize.html</a>
      */
-    public synchronized int finalize(SafeStmtPtr safePtr, long ptr) throws SQLException {
+    public synchronized int finalize(@NonNull SafeStmtPtr safePtr, long ptr) throws SQLException {
         try {
             return finalize(ptr);
         } finally {
@@ -301,7 +304,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/open.html">https://www.sqlite.org/c3ref/open.html</a>
      */
-    protected abstract void _open(String filename, int openFlags) throws SQLException;
+    protected abstract void _open(@NonNull String filename, int openFlags) throws SQLException;
 
     /**
      * Closes the SQLite interface to a database.
@@ -321,7 +324,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/exec.html">https://www.sqlite.org/c3ref/exec.html</a>
      */
-    public abstract int _exec(String sql) throws SQLException;
+    public abstract int _exec(@NonNull String sql) throws SQLException;
 
     /**
      * Complies an SQL statement.
@@ -332,7 +335,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/prepare.html">https://www.sqlite.org/c3ref/prepare.html</a>
      */
-    protected abstract SafeStmtPtr prepare(String sql) throws SQLException;
+    protected abstract SafeStmtPtr prepare(@NonNull String sql) throws SQLException;
 
     /**
      * Destroys a prepared statement.
@@ -414,7 +417,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/column_decltype.html">https://www.sqlite.org/c3ref/column_decltype.html</a>
      */
-    public abstract String column_decltype(long stmt, int col) throws SQLException;
+    public abstract @Nullable String column_decltype(long stmt, int col) throws SQLException;
 
     /**
      * @param stmt Pointer to the statement.
@@ -424,7 +427,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/column_database_name.html">https://www.sqlite.org/c3ref/column_database_name.html</a>
      */
-    public abstract String column_table_name(long stmt, int col) throws SQLException;
+    public abstract @Nullable String column_table_name(long stmt, int col) throws SQLException;
 
     /**
      * @param stmt Pointer to the statement.
@@ -444,7 +447,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/column_blob.html">https://www.sqlite.org/c3ref/column_blob.html</a>
      */
-    public abstract String column_text(long stmt, int col) throws SQLException;
+    public abstract @Nullable String column_text(long stmt, int col) throws SQLException;
 
     /**
      * @param stmt Pointer to the statement.
@@ -454,7 +457,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/column_blob.html">https://www.sqlite.org/c3ref/column_blob.html</a>
      */
-    public abstract byte[] column_blob(long stmt, int col) throws SQLException;
+    public abstract byte @Nullable [] column_blob(long stmt, int col) throws SQLException;
 
     /**
      * @param stmt Pointer to the statement.
@@ -551,7 +554,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/bind_blob.html">https://www.sqlite.org/c3ref/bind_blob.html</a>
      */
-    abstract int bind_text(long stmt, int pos, String v) throws SQLException;
+    abstract int bind_text(long stmt, int pos, @NonNull String v) throws SQLException;
 
     /**
      * Binds blob value to prepared statements with the pointer to the statement object, the index
@@ -565,7 +568,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/bind_blob.html">https://www.sqlite.org/c3ref/bind_blob.html</a>
      */
-    abstract int bind_blob(long stmt, int pos, byte[] v) throws SQLException;
+    abstract int bind_blob(long stmt, int pos, byte @NonNull [] v) throws SQLException;
 
     /**
      * Sets the result of an SQL function as NULL with the pointer to the SQLite database context.
@@ -587,7 +590,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/result_blob.html">https://www.sqlite.org/c3ref/result_blob.html</a>
      */
-    public abstract void result_text(long context, String val) throws SQLException;
+    public abstract void result_text(long context, @NonNull String val) throws SQLException;
 
     /**
      * Sets the result of an SQL function as blob data type with the pointer to the SQLite database
@@ -599,7 +602,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/result_blob.html">https://www.sqlite.org/c3ref/result_blob.html</a>
      */
-    public abstract void result_blob(long context, byte[] val) throws SQLException;
+    public abstract void result_blob(long context, byte @NonNull [] val) throws SQLException;
 
     /**
      * Sets the result of an SQL function as double data type with the pointer to the SQLite
@@ -647,7 +650,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/result_blob.html">https://www.sqlite.org/c3ref/result_blob.html</a>
      */
-    public abstract void result_error(long context, String err) throws SQLException;
+    public abstract void result_error(long context, @NonNull String err) throws SQLException;
 
     /**
      * @param f SQLite function object.
@@ -657,7 +660,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/value_blob.html">https://www.sqlite.org/c3ref/value_blob.html</a>
      */
-    public abstract String value_text(Function f, int arg) throws SQLException;
+    public abstract @Nullable String value_text(@NonNull Function f, int arg) throws SQLException;
 
     /**
      * @param f SQLite function object.
@@ -667,7 +670,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/value_blob.html">https://www.sqlite.org/c3ref/value_blob.html</a>
      */
-    public abstract byte[] value_blob(Function f, int arg) throws SQLException;
+    public abstract byte @Nullable [] value_blob(@NonNull Function f, int arg) throws SQLException;
 
     /**
      * @param f SQLite function object.
@@ -677,7 +680,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/value_blob.html">https://www.sqlite.org/c3ref/value_blob.html</a>
      */
-    public abstract double value_double(Function f, int arg) throws SQLException;
+    public abstract double value_double(@NonNull Function f, int arg) throws SQLException;
 
     /**
      * @param f SQLite function object.
@@ -687,7 +690,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/value_blob.html">https://www.sqlite.org/c3ref/value_blob.html</a>
      */
-    public abstract long value_long(Function f, int arg) throws SQLException;
+    public abstract long value_long(@NonNull Function f, int arg) throws SQLException;
 
     /**
      * Accesses the parameter values on the function or aggregate in int data type with the function
@@ -700,7 +703,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/value_blob.html">https://www.sqlite.org/c3ref/value_blob.html</a>
      */
-    public abstract int value_int(Function f, int arg) throws SQLException;
+    public abstract int value_int(@NonNull Function f, int arg) throws SQLException;
 
     /**
      * @param f SQLite function object.
@@ -710,7 +713,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/value_blob.html">https://www.sqlite.org/c3ref/value_blob.html</a>
      */
-    public abstract int value_type(Function f, int arg) throws SQLException;
+    public abstract int value_type(@NonNull Function f, int arg) throws SQLException;
 
     /**
      * Create a user defined function with given function name and the function object.
@@ -724,7 +727,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/create_function.html">https://www.sqlite.org/c3ref/create_function.html</a>
      */
-    public abstract int create_function(String name, Function f, int nArgs, int flags)
+    public abstract int create_function(@NonNull String name, @NonNull Function f, int nArgs, int flags)
             throws SQLException;
 
     /**
@@ -734,7 +737,7 @@ public abstract class DB implements Codes {
      * @return <a href="https://www.sqlite.org/c3ref/c_abort.html">Result Codes</a>
      * @throws SQLException
      */
-    public abstract int destroy_function(String name) throws SQLException;
+    public abstract int destroy_function(@NonNull String name) throws SQLException;
 
     /**
      * Create a user defined collation with given collation name and the collation object.
@@ -746,7 +749,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/create_collation.html">https://www.sqlite.org/c3ref/create_collation.html</a>
      */
-    public abstract int create_collation(String name, Collation c) throws SQLException;
+    public abstract int create_collation(@NonNull String name, @NonNull Collation c) throws SQLException;
 
     /**
      * Create a user defined collation with given collation name and the collation object.
@@ -755,7 +758,7 @@ public abstract class DB implements Codes {
      * @return <a href="https://www.sqlite.org/c3ref/c_abort.html">Result Codes</a>
      * @throws SQLException
      */
-    public abstract int destroy_collation(String name) throws SQLException;
+    public abstract int destroy_collation(@NonNull String name) throws SQLException;
 
     /**
      * @param dbName Database name to be backed up.
@@ -764,7 +767,10 @@ public abstract class DB implements Codes {
      * @return <a href="https://www.sqlite.org/c3ref/c_abort.html">Result Codes</a>
      * @throws SQLException
      */
-    public abstract int backup(String dbName, String destFileName, ProgressObserver observer)
+    public abstract int backup(
+            @NonNull String dbName,
+            @NonNull String destFileName,
+            @Nullable ProgressObserver observer)
             throws SQLException;
 
     /**
@@ -781,9 +787,9 @@ public abstract class DB implements Codes {
      * @throws SQLException
      */
     public abstract int backup(
-            String dbName,
-            String destFileName,
-            ProgressObserver observer,
+            @NonNull String dbName,
+            @NonNull String destFileName,
+            @Nullable ProgressObserver observer,
             int sleepTimeMillis,
             int nTimeouts,
             int pagesPerStep)
@@ -796,7 +802,10 @@ public abstract class DB implements Codes {
      * @return <a href="https://www.sqlite.org/c3ref/c_abort.html">Result Codes</a>
      * @throws SQLException
      */
-    public abstract int restore(String dbName, String sourceFileName, ProgressObserver observer)
+    public abstract int restore(
+            @NonNull String dbName,
+            @NonNull String sourceFileName,
+            @Nullable ProgressObserver observer)
             throws SQLException;
 
     /**
@@ -813,9 +822,9 @@ public abstract class DB implements Codes {
      * @throws SQLException
      */
     public abstract int restore(
-            String dbName,
-            String sourceFileName,
-            ProgressObserver observer,
+            @NonNull String dbName,
+            @NonNull String sourceFileName,
+            @Nullable ProgressObserver observer,
             int sleepTimeMillis,
             int nTimeouts,
             int pagesPerStep)
@@ -836,7 +845,7 @@ public abstract class DB implements Codes {
     }
 
     /** Progress handler */
-    public abstract void register_progress_handler(int vmCalls, ProgressHandler progressHandler)
+    public abstract void register_progress_handler(int vmCalls, @Nullable ProgressHandler progressHandler)
             throws SQLException;
 
     public abstract void clear_progress_handler() throws SQLException;
@@ -882,7 +891,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/bind_blob.html">https://www.sqlite.org/c3ref/bind_blob.html</a>
      */
-    final synchronized int sqlbind(long stmt, int pos, Object v) throws SQLException {
+    final synchronized int sqlbind(long stmt, int pos, @Nullable Object v) throws SQLException {
         pos++;
         if (v == null) {
             return bind_null(stmt, pos);
@@ -917,12 +926,12 @@ public abstract class DB implements Codes {
      * @throws SQLException if statement is not open or is being used elsewhere
      */
     final synchronized long[] executeBatch(
-            SafeStmtPtr stmt, int count, Object[] vals, boolean autoCommit) throws SQLException {
+            @NonNull SafeStmtPtr stmt, int count, @Nullable Object @Nullable [] vals, boolean autoCommit) throws SQLException {
         return stmt.safeRun((db, ptr) -> this.executeBatch(ptr, count, vals, autoCommit));
     }
 
     private synchronized long[] executeBatch(
-            long stmt, int count, Object[] vals, boolean autoCommit) throws SQLException {
+            long stmt, int count, @Nullable Object @Nullable [] vals, boolean autoCommit) throws SQLException {
         if (count < 1) {
             throw new SQLException("count (" + count + ") < 1");
         }
@@ -974,7 +983,7 @@ public abstract class DB implements Codes {
      * @return True if a row of ResultSet is ready; false otherwise.
      * @throws SQLException
      */
-    public final synchronized boolean execute(CoreStatement stmt, Object[] vals)
+    public final synchronized boolean execute(@NonNull CoreStatement stmt, @Nullable Object @Nullable [] vals)
             throws SQLException {
         int statusCode = stmt.pointer.safeRunInt((db, ptr) -> execute(ptr, vals));
         switch (statusCode & 0xFF) {
@@ -994,7 +1003,7 @@ public abstract class DB implements Codes {
         }
     }
 
-    private synchronized int execute(long ptr, Object[] vals) throws SQLException {
+    private synchronized int execute(long ptr, @Nullable Object @Nullable [] vals) throws SQLException {
         if (vals != null) {
             final int params = bind_parameter_count(ptr);
             if (params > vals.length) {
@@ -1053,7 +1062,7 @@ public abstract class DB implements Codes {
      *     completed SQL.
      * @throws SQLException
      */
-    public final synchronized long executeUpdate(CoreStatement stmt, Object[] vals)
+    public final synchronized long executeUpdate(@NonNull CoreStatement stmt, @Nullable Object @Nullable [] vals)
             throws SQLException {
         try {
             if (execute(stmt, vals)) {
@@ -1071,31 +1080,31 @@ public abstract class DB implements Codes {
 
     abstract void set_update_listener(boolean enabled);
 
-    public synchronized void addUpdateListener(SQLiteUpdateListener listener) {
+    public synchronized void addUpdateListener(@NonNull SQLiteUpdateListener listener) {
         if (updateListeners.add(listener) && updateListeners.size() == 1) {
             set_update_listener(true);
         }
     }
 
-    public synchronized void addCommitListener(SQLiteCommitListener listener) {
+    public synchronized void addCommitListener(@NonNull SQLiteCommitListener listener) {
         if (commitListeners.add(listener) && commitListeners.size() == 1) {
             set_commit_listener(true);
         }
     }
 
-    public synchronized void removeUpdateListener(SQLiteUpdateListener listener) {
+    public synchronized void removeUpdateListener(@NonNull SQLiteUpdateListener listener) {
         if (updateListeners.remove(listener) && updateListeners.isEmpty()) {
             set_update_listener(false);
         }
     }
 
-    public synchronized void removeCommitListener(SQLiteCommitListener listener) {
+    public synchronized void removeCommitListener(@NonNull SQLiteCommitListener listener) {
         if (commitListeners.remove(listener) && commitListeners.isEmpty()) {
             set_commit_listener(false);
         }
     }
 
-    void onUpdate(int type, String database, String table, long rowId) {
+    void onUpdate(int type, @NonNull String database, @NonNull String table, long rowId) {
         // [벤더링 패치] COW 직접 순회 — 모니터 없이 thread-safe
         for (SQLiteUpdateListener listener : updateListeners) {
             SQLiteUpdateListener.Type operationType;
@@ -1152,7 +1161,7 @@ public abstract class DB implements Codes {
      * @param errorMessage Error message to be passed.
      * @throws SQLException Formatted SQLException with error code and message.
      */
-    static void throwex(int errorCode, String errorMessage) throws SQLException {
+    static void throwex(int errorCode, @NonNull String errorMessage) throws SQLException {
         throw newSQLException(errorCode, errorMessage);
     }
 
@@ -1163,7 +1172,7 @@ public abstract class DB implements Codes {
      * @param errorMessage Error message to be passed.
      * @return Formatted SQLException with error code and message.
      */
-    public static SQLiteException newSQLException(int errorCode, String errorMessage) {
+    public static SQLiteException newSQLException(int errorCode, @NonNull String errorMessage) {
         SQLiteErrorCode code = SQLiteErrorCode.getErrorCode(errorCode);
         String msg;
         if (code == SQLiteErrorCode.UNKNOWN_ERROR) {
@@ -1256,12 +1265,12 @@ public abstract class DB implements Codes {
         }
     }
 
-    public abstract byte[] serialize(String schema) throws SQLException;
+    public abstract byte[] serialize(@NonNull String schema) throws SQLException;
 
-    public abstract void deserialize(String schema, byte[] buff) throws SQLException;
+    public abstract void deserialize(@NonNull String schema, byte @NonNull [] buff) throws SQLException;
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) return true;
         if (!(o instanceof DB)) return false;
         DB db = (DB) o;
@@ -1275,7 +1284,8 @@ public abstract class DB implements Codes {
         return hashCode(url, fileName, config);
     }
 
-    public static int hashCode(String url, String fileName, SQLiteConfig config) {
+    public static int hashCode(
+            @NonNull String url, @NonNull String fileName, @NonNull SQLiteConfig config) {
         return Objects.hash(url, fileName, config);
     }
 }

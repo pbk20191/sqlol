@@ -33,6 +33,8 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * SQLite Configuration
@@ -52,13 +54,13 @@ public class SQLiteConfig {
     private static final int DEFAULT_MAX_ATTACHED = 10;
     private static final int DEFAULT_MAX_PAGE_COUNT = 1073741823;
 
-    private final Properties pragmaTable;
+    private final @NonNull Properties pragmaTable;
     private int openModeFlag = 0x00;
 
     private int busyTimeout;
     private boolean explicitReadOnly;
 
-    private final SQLiteConnectionConfig defaultConnectionConfig;
+    private final @NonNull SQLiteConnectionConfig defaultConnectionConfig;
 
     /** Default constructor. */
     public SQLiteConfig() {
@@ -70,7 +72,7 @@ public class SQLiteConfig {
      *
      * @param prop The properties to apply to the configuration.
      */
-    public SQLiteConfig(Properties prop) {
+    public SQLiteConfig(@NonNull Properties prop) {
         this.pragmaTable = prop;
 
         String openMode = pragmaTable.getProperty(Pragma.OPEN_MODE.pragmaName);
@@ -106,7 +108,7 @@ public class SQLiteConfig {
      * @return The connection.
      * @throws SQLException
      */
-    public Connection createConnection(String url) throws SQLException {
+    public @Nullable Connection createConnection(@NonNull String url) throws SQLException {
         return JDBC.createConnection(url, toProperties());
     }
 
@@ -116,7 +118,7 @@ public class SQLiteConfig {
      * @param conn The connection to configure.
      * @throws SQLException
      */
-    public void apply(Connection conn) throws SQLException {
+    public void apply(@NonNull Connection conn) throws SQLException {
 
         HashSet<String> pragmaParams = new HashSet<String>();
         for (Pragma each : Pragma.values()) {
@@ -234,7 +236,7 @@ public class SQLiteConfig {
      * @param pragma The pragma to set.
      * @param flag The boolean value.
      */
-    private void set(Pragma pragma, boolean flag) {
+    private void set(@NonNull Pragma pragma, boolean flag) {
         setPragma(pragma, Boolean.toString(flag));
     }
 
@@ -244,7 +246,7 @@ public class SQLiteConfig {
      * @param pragma The pragma to set.
      * @param num The int value.
      */
-    private void set(Pragma pragma, int num) {
+    private void set(@NonNull Pragma pragma, int num) {
         setPragma(pragma, Integer.toString(num));
     }
 
@@ -255,7 +257,7 @@ public class SQLiteConfig {
      * @param defaultValue The value to check for.
      * @return True if the given value is the default value; false otherwise.
      */
-    private boolean getBoolean(Pragma pragma, String defaultValue) {
+    private boolean getBoolean(@NonNull Pragma pragma, @NonNull String defaultValue) {
         return Boolean.parseBoolean(pragmaTable.getProperty(pragma.pragmaName, defaultValue));
     }
 
@@ -266,7 +268,7 @@ public class SQLiteConfig {
      * @param defaultValue The default value.
      * @return The value of the pragma or defaultValue.
      */
-    private int parseLimitPragma(Pragma pragma, int defaultValue) {
+    private int parseLimitPragma(@NonNull Pragma pragma, int defaultValue) {
         if (!pragmaTable.containsKey(pragma.pragmaName)) {
             return defaultValue;
         }
@@ -309,7 +311,7 @@ public class SQLiteConfig {
      * @param pragma The pragma to change.
      * @param value The value to set it to.
      */
-    public void setPragma(Pragma pragma, String value) {
+    public void setPragma(@NonNull Pragma pragma, @NonNull String value) {
         pragmaTable.put(pragma.pragmaName, value);
     }
 
@@ -606,19 +608,19 @@ public class SQLiteConfig {
         JDBC_GET_GENERATED_KEYS(
                 "jdbc.get_generated_keys", "Enable retrieval of generated keys", OnOff.Values);
 
-        public final String pragmaName;
-        public final String[] choices;
-        public final String description;
+        public final @NonNull String pragmaName;
+        public final String @Nullable [] choices;
+        public final @Nullable String description;
 
-        Pragma(String pragmaName) {
+        Pragma(@NonNull String pragmaName) {
             this(pragmaName, null);
         }
 
-        Pragma(String pragmaName, String[] choices) {
+        Pragma(@NonNull String pragmaName, String @Nullable [] choices) {
             this(pragmaName, null, choices);
         }
 
-        Pragma(String pragmaName, String description, String[] choices) {
+        Pragma(@NonNull String pragmaName, @Nullable String description, String @Nullable [] choices) {
             this.pragmaName = pragmaName;
             this.description = description;
             this.choices = choices;
@@ -630,7 +632,7 @@ public class SQLiteConfig {
          * @param list Array if PragmaValue.
          * @return String array of Enum values
          */
-        private static String[] toStringArray(PragmaValue[] list) {
+        private static String[] toStringArray(PragmaValue @NonNull [] list) {
             String[] result = new String[list.length];
             for (int i = 0; i < list.length; i++) {
                 result[i] = list[i].getValue();
@@ -650,7 +652,7 @@ public class SQLiteConfig {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/c_open_autoproxy.html">https://www.sqlite.org/c3ref/c_open_autoproxy.html</a>
      */
-    public void setOpenMode(SQLiteOpenMode mode) {
+    public void setOpenMode(@NonNull SQLiteOpenMode mode) {
         openModeFlag |= mode.flag;
     }
 
@@ -661,7 +663,7 @@ public class SQLiteConfig {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/c_open_autoproxy.html">https://www.sqlite.org/c3ref/c_open_autoproxy.html</a>
      */
-    public void resetOpenMode(SQLiteOpenMode mode) {
+    public void resetOpenMode(@NonNull SQLiteOpenMode mode) {
         openModeFlag &= ~mode.flag;
     }
 
@@ -793,13 +795,13 @@ public class SQLiteConfig {
         UTF_16LE(UTF16_LITTLE_ENDIAN), // UTF-16le
         UTF_16BE(UTF16_BIG_ENDIAN); // UTF-16be
 
-        public final String typeName;
+        public final @NonNull String typeName;
 
-        Encoding(String typeName) {
+        Encoding(@NonNull String typeName) {
             this.typeName = typeName;
         }
 
-        Encoding(Encoding encoding) {
+        Encoding(@NonNull Encoding encoding) {
             this.typeName = encoding.getValue();
         }
 
@@ -807,7 +809,7 @@ public class SQLiteConfig {
             return typeName;
         }
 
-        public static Encoding getEncoding(String value) {
+        public static Encoding getEncoding(@NonNull String value) {
             return valueOf(value.replaceAll("-", "_").toUpperCase());
         }
     }
@@ -832,7 +834,7 @@ public class SQLiteConfig {
      * @see <a
      *     href="https://www.sqlite.org/pragma.html#pragma_encoding">www.sqlite.org/pragma.html#pragma_encoding</a>
      */
-    public void setEncoding(Encoding encoding) {
+    public void setEncoding(@NonNull Encoding encoding) {
         setPragma(Pragma.ENCODING, encoding.typeName);
     }
 
@@ -895,7 +897,7 @@ public class SQLiteConfig {
      * @see <a
      *     href="https://www.sqlite.org/pragma.html#pragma_journal_mode">www.sqlite.org/pragma.html#pragma_journal_mode</a>
      */
-    public void setJournalMode(JournalMode mode) {
+    public void setJournalMode(@NonNull JournalMode mode) {
         setPragma(Pragma.JOURNAL_MODE, mode.name());
     }
 
@@ -954,7 +956,7 @@ public class SQLiteConfig {
      * @see <a
      *     href="https://www.sqlite.org/pragma.html#pragma_locking_mode">www.sqlite.org/pragma.html#pragma_locking_mode</a>
      */
-    public void setLockingMode(LockingMode mode) {
+    public void setLockingMode(@NonNull LockingMode mode) {
         setPragma(Pragma.LOCKING_MODE, mode.name());
     }
 
@@ -1057,7 +1059,7 @@ public class SQLiteConfig {
      * @see <a
      *     href="https://www.sqlite.org/pragma.html#pragma_synchronous">www.sqlite.org/pragma.html#pragma_synchronous</a>
      */
-    public void setSynchronous(SynchronousMode mode) {
+    public void setSynchronous(@NonNull SynchronousMode mode) {
         setPragma(Pragma.SYNCHRONOUS, mode.name());
     }
 
@@ -1081,7 +1083,7 @@ public class SQLiteConfig {
      *       <li>SQLCIPHER - the SQLite database engine calls pragma key = "x''" to set the password
      *     </ul>
      */
-    public void setHexKeyMode(HexKeyMode mode) {
+    public void setHexKeyMode(@NonNull HexKeyMode mode) {
         setPragma(Pragma.HEXKEY_MODE, mode.name());
     }
 
@@ -1109,7 +1111,7 @@ public class SQLiteConfig {
      * @see <a
      *     href="https://www.sqlite.org/pragma.html#pragma_temp_store">www.sqlite.org/pragma.html#pragma_temp_store</a>
      */
-    public void setTempStore(TempStore storeType) {
+    public void setTempStore(@NonNull TempStore storeType) {
         setPragma(Pragma.TEMP_STORE, storeType.name());
     }
 
@@ -1121,7 +1123,7 @@ public class SQLiteConfig {
      * @see <a
      *     href="https://www.sqlite.org/pragma.html#pragma_temp_store_directory">www.sqlite.org/pragma.html#pragma_temp_store_directory</a>
      */
-    public void setTempStoreDirectory(String directoryName) {
+    public void setTempStoreDirectory(@NonNull String directoryName) {
         setPragma(Pragma.TEMP_STORE_DIRECTORY, String.format("'%s'", directoryName));
     }
 
@@ -1161,7 +1163,7 @@ public class SQLiteConfig {
             return name();
         }
 
-        public static TransactionMode getMode(String mode) {
+        public static TransactionMode getMode(@NonNull String mode) {
             return TransactionMode.valueOf(mode.toUpperCase());
         }
     }
@@ -1173,7 +1175,7 @@ public class SQLiteConfig {
      * @see <a
      *     href="https://www.sqlite.org/lang_transaction.html">https://www.sqlite.org/lang_transaction.html</a>
      */
-    public void setTransactionMode(TransactionMode transactionMode) {
+    public void setTransactionMode(@NonNull TransactionMode transactionMode) {
         this.defaultConnectionConfig.setTransactionMode(transactionMode);
     }
 
@@ -1184,7 +1186,7 @@ public class SQLiteConfig {
      * @see <a
      *     href="https://www.sqlite.org/lang_transaction.html">https://www.sqlite.org/lang_transaction.html</a>
      */
-    public void setTransactionMode(String transactionMode) {
+    public void setTransactionMode(@NonNull String transactionMode) {
         setTransactionMode(TransactionMode.getMode(transactionMode));
     }
 
@@ -1203,7 +1205,7 @@ public class SQLiteConfig {
             return name();
         }
 
-        public static DatePrecision getPrecision(String precision) {
+        public static DatePrecision getPrecision(@NonNull String precision) {
             return DatePrecision.valueOf(precision.toUpperCase());
         }
     }
@@ -1211,7 +1213,7 @@ public class SQLiteConfig {
     /**
      * @param datePrecision One of SECONDS or MILLISECONDS
      */
-    public void setDatePrecision(String datePrecision) {
+    public void setDatePrecision(@NonNull String datePrecision) {
         this.defaultConnectionConfig.setDatePrecision(DatePrecision.getPrecision(datePrecision));
     }
 
@@ -1224,7 +1226,7 @@ public class SQLiteConfig {
             return name();
         }
 
-        public static DateClass getDateClass(String dateClass) {
+        public static DateClass getDateClass(@NonNull String dateClass) {
             return DateClass.valueOf(dateClass.toUpperCase());
         }
     }
@@ -1232,14 +1234,14 @@ public class SQLiteConfig {
     /**
      * @param dateClass One of INTEGER, TEXT or REAL
      */
-    public void setDateClass(String dateClass) {
+    public void setDateClass(@NonNull String dateClass) {
         this.defaultConnectionConfig.setDateClass(DateClass.getDateClass(dateClass));
     }
 
     /**
      * @param dateStringFormat Format of date string
      */
-    public void setDateStringFormat(String dateStringFormat) {
+    public void setDateStringFormat(@NonNull String dateStringFormat) {
 
         this.defaultConnectionConfig.setDateStringFormat(dateStringFormat);
     }
@@ -1265,7 +1267,7 @@ public class SQLiteConfig {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) return true;
         if (!(o instanceof SQLiteConfig)) return false;
         SQLiteConfig that = (SQLiteConfig) o;

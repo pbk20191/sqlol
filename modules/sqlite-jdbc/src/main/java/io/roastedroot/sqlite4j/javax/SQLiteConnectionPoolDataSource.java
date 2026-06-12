@@ -17,6 +17,8 @@ import io.roastedroot.sqlite4j.SQLiteConfig;
 import io.roastedroot.sqlite4j.SQLiteDataSource;
 import java.sql.SQLException;
 import javax.sql.PooledConnection;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 public class SQLiteConnectionPoolDataSource extends SQLiteDataSource
         implements javax.sql.ConnectionPoolDataSource {
@@ -31,7 +33,7 @@ public class SQLiteConnectionPoolDataSource extends SQLiteDataSource
      *
      * @param config The configuration for the data source.
      */
-    public SQLiteConnectionPoolDataSource(SQLiteConfig config) {
+    public SQLiteConnectionPoolDataSource(@NonNull SQLiteConfig config) {
         super(config);
     }
 
@@ -46,7 +48,7 @@ public class SQLiteConnectionPoolDataSource extends SQLiteDataSource
      * @see javax.sql.ConnectionPoolDataSource#getPooledConnection(java.lang.String,
      *     java.lang.String)
      */
-    public PooledConnection getPooledConnection(String user, String password) throws SQLException {
+    public PooledConnection getPooledConnection(@Nullable String user, @Nullable String password) throws SQLException {
         return new SQLitePooledConnection(getConnection(user, password));
     }
 }

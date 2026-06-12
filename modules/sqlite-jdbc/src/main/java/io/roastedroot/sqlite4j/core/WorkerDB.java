@@ -9,6 +9,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import org.example.sqlite.WorkerDbPort;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * xerial {@link DB} 절단면을 modules/sqlite 의 워커 아키텍처(wasm pthread + WAL) 위에 구현.
@@ -24,9 +26,10 @@ import org.example.sqlite.WorkerDbPort;
 public final class WorkerDB extends DB {
 
     private final boolean memory;
-    private volatile WorkerDbPort port;
+    private volatile @Nullable WorkerDbPort port;
 
-    public WorkerDB(String url, String fileName, SQLiteConfig config, boolean isMemory)
+    public WorkerDB(
+            @NonNull String url, @NonNull String fileName, @NonNull SQLiteConfig config, boolean isMemory)
             throws SQLException {
         super(url, fileName, config);
         this.memory = isMemory;
@@ -42,7 +45,7 @@ public final class WorkerDB extends DB {
     }
 
     /** 포트 호출 공통 래핑 — 워커 타임아웃/종료(IllegalState)·ExecutionException 을 SQLException 으로. */
-    private <T> T call(Op<T> op) throws SQLException {
+    private <T> T call(@NonNull Op<T> op) throws SQLException {
         try {
             return op.run();
         } catch (SQLException e) {
@@ -75,7 +78,7 @@ public final class WorkerDB extends DB {
     private static final int OPEN_CREATE = 0x4;
 
     @Override
-    protected synchronized void _open(String filename, int openFlags) throws SQLException {
+    protected synchronized void _open(@NonNull String filename, int openFlags) throws SQLException {
         if (port != null) throw new SQLException("already open: " + filename);
         boolean readOnly = (openFlags & OPEN_READONLY) != 0;
         if (!memory) {
@@ -143,7 +146,7 @@ public final class WorkerDB extends DB {
     }
 
     @Override
-    public synchronized void busy_handler(BusyHandler busyHandler) throws SQLException {
+    public synchronized void busy_handler(@Nullable BusyHandler busyHandler) throws SQLException {
         WorkerDbPort p = port();
         int old = busyKey;
         if (busyHandler == null) {
@@ -199,7 +202,7 @@ public final class WorkerDB extends DB {
     }
 
     @Override
-    public int _exec(String sql) throws SQLException {
+    public int _exec(@NonNull String sql) throws SQLException {
         return call(() -> port().exec(sql));
     }
 
@@ -211,7 +214,7 @@ public final class WorkerDB extends DB {
     // ---- stmt 수명/실행 ----
 
     @Override
-    protected SafeStmtPtr prepare(String sql) throws SQLException {
+    protected SafeStmtPtr prepare(@NonNull String sql) throws SQLException {
         int st = call(() -> port().prepare(sql));
         return new SafeStmtPtr(this, st);
     }
@@ -254,12 +257,12 @@ public final class WorkerDB extends DB {
     }
 
     @Override
-    public String column_decltype(long stmt, int col) throws SQLException {
+    public @Nullable String column_decltype(long stmt, int col) throws SQLException {
         return call(() -> port().columnDecltype((int) stmt, col));
     }
 
     @Override
-    public String column_table_name(long stmt, int col) throws SQLException {
+    public @Nullable String column_table_name(long stmt, int col) throws SQLException {
         return call(() -> port().columnTableName((int) stmt, col));
     }
 
@@ -269,12 +272,12 @@ public final class WorkerDB extends DB {
     }
 
     @Override
-    public String column_text(long stmt, int col) throws SQLException {
+    public @Nullable String column_text(long stmt, int col) throws SQLException {
         return call(() -> port().columnText((int) stmt, col));
     }
 
     @Override
-    public byte[] column_blob(long stmt, int col) throws SQLException {
+    public byte @Nullable [] column_blob(long stmt, int col) throws SQLException {
         return call(() -> port().columnBlob((int) stmt, col));
     }
 
@@ -321,12 +324,12 @@ public final class WorkerDB extends DB {
     }
 
     @Override
-    int bind_text(long stmt, int pos, String v) throws SQLException {
+    int bind_text(long stmt, int pos, @NonNull String v) throws SQLException {
         return call(() -> port().bind((int) stmt, pos, v));
     }
 
     @Override
-    int bind_blob(long stmt, int pos, byte[] v) throws SQLException {
+    int bind_blob(long stmt, int pos, byte @NonNull [] v) throws SQLException {
         return call(() -> port().bind((int) stmt, pos, v));
     }
 
@@ -340,12 +343,12 @@ public final class WorkerDB extends DB {
     private static final int UTF8 = 1;
 
     /** UDF 콜백이 실행 중인 동안의 호출 컨텍스트 — 이 커넥션의 워커 스레드만 만진다 (UDF 는 step 스레드 전용). */
-    private volatile org.example.sqlite.CallbackEnv activeEnv;
+    private volatile org.example.sqlite.@Nullable CallbackEnv activeEnv;
 
     /** name → (registry key, nArgs) — destroy 시 같은 nArgs 로 NULL 재등록해야 정확히 교체된다. */
-    private final java.util.Map<String, int[]> functionKeys = new java.util.HashMap<>();
+    private final java.util.@NonNull Map<String, int[]> functionKeys = new java.util.HashMap<>();
 
-    private final java.util.Map<String, Integer> collationKeys = new java.util.HashMap<>();
+    private final java.util.@NonNull Map<String, Integer> collationKeys = new java.util.HashMap<>();
     private int busyKey;
     private int progressKey;
     private int commitKey;
@@ -363,19 +366,24 @@ public final class WorkerDB extends DB {
         return e;
     }
 
-    private int valuePtr(Function f, int arg) throws SQLException {
+    private int valuePtr(@NonNull Function f, int arg) throws SQLException {
         return env().deref((int) f.getValueArg(arg));
     }
 
     /** xerial Function → JvmCallbacks.Udf 어댑터 (WasmDB 디스패치와 동일: context/value/args 주입). */
     private final class UdfAdapter implements org.example.sqlite.JvmCallbacks.Udf {
-        private final Function f;
+        private final @NonNull Function f;
 
-        UdfAdapter(Function f) {
+        UdfAdapter(@NonNull Function f) {
             this.f = f;
         }
 
-        private void invoke(org.example.sqlite.CallbackEnv env, int ctx, int argc, int argv, Runnable call) {
+        private void invoke(
+                org.example.sqlite.@NonNull CallbackEnv env,
+                int ctx,
+                int argc,
+                int argv,
+                @NonNull Runnable call) {
             activeEnv = env;
             f.setContext(ctx);
             f.setValue(argv);
@@ -384,7 +392,7 @@ public final class WorkerDB extends DB {
         }
 
         @Override
-        public void xFunc(org.example.sqlite.CallbackEnv env, int ctx, int argc, int argv) {
+        public void xFunc(org.example.sqlite.@NonNull CallbackEnv env, int ctx, int argc, int argv) {
             invoke(env, ctx, argc, argv, () -> {
                 try {
                     f.xFunc();
@@ -395,7 +403,7 @@ public final class WorkerDB extends DB {
         }
 
         @Override
-        public void xStep(org.example.sqlite.CallbackEnv env, int ctx, int argc, int argv) {
+        public void xStep(org.example.sqlite.@NonNull CallbackEnv env, int ctx, int argc, int argv) {
             invoke(env, ctx, argc, argv, () -> {
                 try {
                     ((Function.Aggregate) f).xStep();
@@ -406,7 +414,7 @@ public final class WorkerDB extends DB {
         }
 
         @Override
-        public void xFinal(org.example.sqlite.CallbackEnv env, int ctx) {
+        public void xFinal(org.example.sqlite.@NonNull CallbackEnv env, int ctx) {
             activeEnv = env;
             f.setContext(ctx);
             try {
@@ -417,7 +425,7 @@ public final class WorkerDB extends DB {
         }
 
         @Override
-        public void xValue(org.example.sqlite.CallbackEnv env, int ctx) {
+        public void xValue(org.example.sqlite.@NonNull CallbackEnv env, int ctx) {
             activeEnv = env;
             f.setContext(ctx);
             try {
@@ -428,7 +436,7 @@ public final class WorkerDB extends DB {
         }
 
         @Override
-        public void xInverse(org.example.sqlite.CallbackEnv env, int ctx, int argc, int argv) {
+        public void xInverse(org.example.sqlite.@NonNull CallbackEnv env, int ctx, int argc, int argv) {
             invoke(env, ctx, argc, argv, () -> {
                 try {
                     ((Function.Window) f).xInverse();
@@ -445,12 +453,12 @@ public final class WorkerDB extends DB {
     }
 
     @Override
-    public void result_text(long context, String val) throws SQLException {
+    public void result_text(long context, @NonNull String val) throws SQLException {
         env().resultText((int) context, val);
     }
 
     @Override
-    public void result_blob(long context, byte[] val) throws SQLException {
+    public void result_blob(long context, byte @NonNull [] val) throws SQLException {
         env().resultBlob((int) context, val);
     }
 
@@ -470,42 +478,42 @@ public final class WorkerDB extends DB {
     }
 
     @Override
-    public void result_error(long context, String err) throws SQLException {
+    public void result_error(long context, @NonNull String err) throws SQLException {
         env().resultError((int) context, err);
     }
 
     @Override
-    public String value_text(Function f, int arg) throws SQLException {
+    public @Nullable String value_text(@NonNull Function f, int arg) throws SQLException {
         return env().valueText(valuePtr(f, arg));
     }
 
     @Override
-    public byte[] value_blob(Function f, int arg) throws SQLException {
+    public byte @Nullable [] value_blob(@NonNull Function f, int arg) throws SQLException {
         return env().valueBlob(valuePtr(f, arg));
     }
 
     @Override
-    public double value_double(Function f, int arg) throws SQLException {
+    public double value_double(@NonNull Function f, int arg) throws SQLException {
         return env().valueDouble(valuePtr(f, arg));
     }
 
     @Override
-    public long value_long(Function f, int arg) throws SQLException {
+    public long value_long(@NonNull Function f, int arg) throws SQLException {
         return env().valueLong(valuePtr(f, arg));
     }
 
     @Override
-    public int value_int(Function f, int arg) throws SQLException {
+    public int value_int(@NonNull Function f, int arg) throws SQLException {
         return env().valueInt(valuePtr(f, arg));
     }
 
     @Override
-    public int value_type(Function f, int arg) throws SQLException {
+    public int value_type(@NonNull Function f, int arg) throws SQLException {
         return env().valueType(valuePtr(f, arg));
     }
 
     @Override
-    public synchronized int create_function(String name, Function f, int nArgs, int flags)
+    public synchronized int create_function(@NonNull String name, @NonNull Function f, int nArgs, int flags)
             throws SQLException {
         WorkerDbPort p = port();
         int kind =
@@ -525,7 +533,7 @@ public final class WorkerDB extends DB {
     }
 
     @Override
-    public synchronized int destroy_function(String name) throws SQLException {
+    public synchronized int destroy_function(@NonNull String name) throws SQLException {
         WorkerDbPort p = port();
         int[] meta = functionKeys.remove(name);
         int nArgs = (meta != null) ? meta[1] : 0;
@@ -534,7 +542,8 @@ public final class WorkerDB extends DB {
     }
 
     @Override
-    public synchronized int create_collation(String name, Collation c) throws SQLException {
+    public synchronized int create_collation(@NonNull String name, @NonNull Collation c)
+            throws SQLException {
         WorkerDbPort p = port();
         int key =
                 p.getCallbacks()
@@ -554,7 +563,7 @@ public final class WorkerDB extends DB {
     }
 
     @Override
-    public synchronized int destroy_collation(String name) throws SQLException {
+    public synchronized int destroy_collation(@NonNull String name) throws SQLException {
         WorkerDbPort p = port();
         collationKeys.remove(name);
         // NULL 재등록 → xDestroyCollation(oldKey) → 레지스트리 자동 해제
@@ -567,7 +576,10 @@ public final class WorkerDB extends DB {
     private static final int DEFAULT_PAGES_PER_BACKUP_STEP = 100;
 
     @Override
-    public int backup(String dbName, String destFileName, ProgressObserver observer)
+    public int backup(
+            @NonNull String dbName,
+            @NonNull String destFileName,
+            @Nullable ProgressObserver observer)
             throws SQLException {
         return backup(
                 dbName,
@@ -580,9 +592,9 @@ public final class WorkerDB extends DB {
 
     @Override
     public int backup(
-            String dbName,
-            String destFileName,
-            ProgressObserver observer,
+            @NonNull String dbName,
+            @NonNull String destFileName,
+            @Nullable ProgressObserver observer,
             int sleepTimeMillis,
             int nTimeouts,
             int pagesPerStep)
@@ -606,7 +618,10 @@ public final class WorkerDB extends DB {
     }
 
     @Override
-    public int restore(String dbName, String sourceFileName, ProgressObserver observer)
+    public int restore(
+            @NonNull String dbName,
+            @NonNull String sourceFileName,
+            @Nullable ProgressObserver observer)
             throws SQLException {
         return restore(
                 dbName,
@@ -619,9 +634,9 @@ public final class WorkerDB extends DB {
 
     @Override
     public int restore(
-            String dbName,
-            String sourceFileName,
-            ProgressObserver observer,
+            @NonNull String dbName,
+            @NonNull String sourceFileName,
+            @Nullable ProgressObserver observer,
             int sleepTimeMillis,
             int nTimeouts,
             int pagesPerStep)
@@ -644,7 +659,7 @@ public final class WorkerDB extends DB {
     }
 
     @Override
-    public synchronized void register_progress_handler(int vmCalls, ProgressHandler progressHandler)
+    public synchronized void register_progress_handler(int vmCalls, @Nullable ProgressHandler progressHandler)
             throws SQLException {
         if (progressHandler == null) {   // ProgressHandler.setHandler(conn, n, null) = 해제
             clear_progress_handler();
@@ -754,7 +769,7 @@ public final class WorkerDB extends DB {
     }
 
     @Override
-    public byte[] serialize(String schema) throws SQLException {
+    public byte[] serialize(@NonNull String schema) throws SQLException {
         byte[] result = call(() -> port().serialize(schema));
         if (result == null) {
             throw new SQLException("serialize 실패: schema=" + schema);
@@ -763,7 +778,7 @@ public final class WorkerDB extends DB {
     }
 
     @Override
-    public void deserialize(String schema, byte[] buff) throws SQLException {
+    public void deserialize(@NonNull String schema, byte @NonNull [] buff) throws SQLException {
         int rc = call(() -> port().deserialize(schema, buff));
         if (rc != SQLITE_OK) {
             throw newSQLException(rc, errmsg());

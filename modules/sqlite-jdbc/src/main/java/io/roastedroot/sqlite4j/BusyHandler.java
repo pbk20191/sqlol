@@ -2,6 +2,8 @@ package io.roastedroot.sqlite4j;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /** https://www.sqlite.org/c3ref/busy_handler.html */
 public abstract class BusyHandler {
@@ -13,7 +15,7 @@ public abstract class BusyHandler {
      * @param busyHandler the busyHandler
      * @throws SQLException
      */
-    private static void commitHandler(Connection conn, BusyHandler busyHandler)
+    private static void commitHandler(@NonNull Connection conn, @Nullable BusyHandler busyHandler)
             throws SQLException {
 
         if (!(conn instanceof SQLiteConnection)) {
@@ -35,7 +37,7 @@ public abstract class BusyHandler {
      * @param busyHandler the busyHandler
      * @throws SQLException
      */
-    public static final void setHandler(Connection conn, BusyHandler busyHandler)
+    public static final void setHandler(@NonNull Connection conn, @NonNull BusyHandler busyHandler)
             throws SQLException {
         commitHandler(conn, busyHandler);
     }
@@ -46,7 +48,7 @@ public abstract class BusyHandler {
      * @param conn the SQLite connection
      * @throws SQLException
      */
-    public static final void clearHandler(Connection conn) throws SQLException {
+    public static final void clearHandler(@NonNull Connection conn) throws SQLException {
         commitHandler(conn, null);
     }
 

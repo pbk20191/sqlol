@@ -2,6 +2,7 @@ package io.roastedroot.sqlite4j;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import org.jspecify.annotations.NonNull;
 
 /** https://www.sqlite.org/c3ref/progress_handler.html */
 public abstract class ProgressHandler {
@@ -15,7 +16,8 @@ public abstract class ProgressHandler {
      * @throws SQLException
      */
     public static final void setHandler(
-            Connection conn, int vmCalls, ProgressHandler progressHandler) throws SQLException {
+            @NonNull Connection conn, int vmCalls, @NonNull ProgressHandler progressHandler)
+            throws SQLException {
         if (!(conn instanceof SQLiteConnection)) {
             throw new SQLException("connection must be to an SQLite db");
         }
@@ -32,7 +34,7 @@ public abstract class ProgressHandler {
      * @param conn the SQLite connection
      * @throws SQLException
      */
-    public static final void clearHandler(Connection conn) throws SQLException {
+    public static final void clearHandler(@NonNull Connection conn) throws SQLException {
         SQLiteConnection sqliteConnection = (SQLiteConnection) conn;
         sqliteConnection.getDatabase().clear_progress_handler();
     }

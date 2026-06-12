@@ -12,10 +12,12 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLXML;
 import java.sql.Statement;
 import java.util.Properties;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 public class JDBC4Connection extends JDBC3Connection {
 
-    public JDBC4Connection(String url, String fileName, Properties prop) throws SQLException {
+    public JDBC4Connection(@NonNull String url, @NonNull String fileName, @NonNull Properties prop) throws SQLException {
         super(url, fileName, prop);
     }
 
@@ -26,7 +28,7 @@ public class JDBC4Connection extends JDBC3Connection {
         return new JDBC4Statement(this);
     }
 
-    public PreparedStatement prepareStatement(String sql, int rst, int rsc, int rsh)
+    public PreparedStatement prepareStatement(@NonNull String sql, int rst, int rsc, int rsh)
             throws SQLException {
         checkOpen();
         checkCursor(rst, rsc, rsh);
@@ -42,12 +44,12 @@ public class JDBC4Connection extends JDBC3Connection {
         return super.isClosed();
     }
 
-    public <T> T unwrap(Class<T> iface) throws ClassCastException {
+    public <T> T unwrap(@NonNull Class<T> iface) throws ClassCastException {
         // caller should invoke isWrapperFor prior to unwrap
         return iface.cast(this);
     }
 
-    public boolean isWrapperFor(Class<?> iface) {
+    public boolean isWrapperFor(@NonNull Class<?> iface) {
         return iface.isInstance(this);
     }
 
@@ -83,27 +85,27 @@ public class JDBC4Connection extends JDBC3Connection {
         }
     }
 
-    public void setClientInfo(String name, String value) throws SQLClientInfoException {
+    public void setClientInfo(@NonNull String name, @Nullable String value) throws SQLClientInfoException {
         // TODO Auto-generated method stub
 
     }
 
-    public void setClientInfo(Properties properties) throws SQLClientInfoException {
+    public void setClientInfo(@NonNull Properties properties) throws SQLClientInfoException {
         // TODO Auto-generated method stub
 
     }
 
-    public String getClientInfo(String name) throws SQLException {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    public Properties getClientInfo() throws SQLException {
+    public @Nullable String getClientInfo(@NonNull String name) throws SQLException {
         // TODO Auto-generated method stub
         return null;
     }
 
-    public Array createArrayOf(String typeName, Object[] elements) throws SQLException {
+    public @Nullable Properties getClientInfo() throws SQLException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    public @Nullable Array createArrayOf(@NonNull String typeName, @Nullable Object[] elements) throws SQLException {
         // TODO Auto-generated method stub
         return null;
     }

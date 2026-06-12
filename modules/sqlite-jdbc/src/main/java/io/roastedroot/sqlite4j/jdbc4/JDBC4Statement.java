@@ -4,18 +4,19 @@ import io.roastedroot.sqlite4j.SQLiteConnection;
 import io.roastedroot.sqlite4j.jdbc3.JDBC3Statement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import org.jspecify.annotations.NonNull;
 
 public class JDBC4Statement extends JDBC3Statement implements Statement {
-    public JDBC4Statement(SQLiteConnection conn) {
+    public JDBC4Statement(@NonNull SQLiteConnection conn) {
         super(conn);
     }
 
     // JDBC 4
-    public <T> T unwrap(Class<T> iface) throws ClassCastException {
+    public <T> T unwrap(@NonNull Class<T> iface) throws ClassCastException {
         return iface.cast(this);
     }
 
-    public boolean isWrapperFor(Class<?> iface) {
+    public boolean isWrapperFor(@NonNull Class<?> iface) {
         return iface.isInstance(this);
     }
 

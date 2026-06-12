@@ -22,15 +22,17 @@ import java.sql.SQLException;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.Executor;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /** */
 public abstract class SQLiteConnection implements Connection {
     private static final String RESOURCE_NAME_PREFIX = ":resource:";
-    private final DB db;
-    private CoreDatabaseMetaData meta = null;
-    private final SQLiteConnectionConfig connectionConfig;
+    private final @NonNull DB db;
+    private @Nullable CoreDatabaseMetaData meta = null;
+    private final @NonNull SQLiteConnectionConfig connectionConfig;
 
-    private TransactionMode currentTransactionMode;
+    private @Nullable TransactionMode currentTransactionMode;
     private boolean firstStatementExecuted = false;
 
     private static final WorkerDBFactory cache = new WorkerDBFactory();
@@ -40,7 +42,7 @@ public abstract class SQLiteConnection implements Connection {
      *
      * @param db
      */
-    public SQLiteConnection(DB db) {
+    public SQLiteConnection(@NonNull DB db) {
         this.db = db;
         connectionConfig = db.getConfig().newConnectionConfig();
     }
@@ -52,7 +54,7 @@ public abstract class SQLiteConnection implements Connection {
      * @param fileName The database.
      * @throws SQLException
      */
-    public SQLiteConnection(String url, String fileName) throws SQLException {
+    public SQLiteConnection(@NonNull String url, @NonNull String fileName) throws SQLException {
         this(url, fileName, new Properties());
     }
 
@@ -64,7 +66,8 @@ public abstract class SQLiteConnection implements Connection {
      * @param prop The configurations to apply.
      * @throws SQLException
      */
-    public SQLiteConnection(String url, String fileName, Properties prop) throws SQLException {
+    public SQLiteConnection(@NonNull String url, @NonNull String fileName, @NonNull Properties prop)
+            throws SQLException {
         DB newDB = null;
         try {
             this.db = newDB = open(url, fileName, prop);
@@ -86,11 +89,11 @@ public abstract class SQLiteConnection implements Connection {
         }
     }
 
-    public TransactionMode getCurrentTransactionMode() {
+    public @Nullable TransactionMode getCurrentTransactionMode() {
         return this.currentTransactionMode;
     }
 
-    public void setCurrentTransactionMode(final TransactionMode currentTransactionMode) {
+    public void setCurrentTransactionMode(final @NonNull TransactionMode currentTransactionMode) {
         this.currentTransactionMode = currentTransactionMode;
     }
 
@@ -125,20 +128,20 @@ public abstract class SQLiteConnection implements Connection {
         return db.getUrl();
     }
 
-    public void setSchema(String schema) throws SQLException {
+    public void setSchema(@NonNull String schema) throws SQLException {
         // TODO
     }
 
-    public String getSchema() throws SQLException {
+    public @Nullable String getSchema() throws SQLException {
         // TODO
         return null;
     }
 
-    public void abort(Executor executor) throws SQLException {
+    public void abort(@NonNull Executor executor) throws SQLException {
         // TODO
     }
 
-    public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
+    public void setNetworkTimeout(@NonNull Executor executor, int milliseconds) throws SQLException {
         // TODO
     }
 
@@ -178,7 +181,7 @@ public abstract class SQLiteConnection implements Connection {
      * @see <a
      *     href="https://www.sqlite.org/lang_transaction.html">https://www.sqlite.org/lang_transaction.html</a>
      */
-    protected void setTransactionMode(SQLiteConfig.TransactionMode mode) {
+    protected void setTransactionMode(SQLiteConfig.@NonNull TransactionMode mode) {
         connectionConfig.setTransactionMode(mode);
     }
 
@@ -223,7 +226,8 @@ public abstract class SQLiteConnection implements Connection {
      * @see <a
      *     href="https://www.sqlite.org/c3ref/c_open_autoproxy.html">https://www.sqlite.org/c3ref/c_open_autoproxy.html</a>
      */
-    private static DB open(String url, String origFileName, Properties props) throws SQLException {
+    private static DB open(@NonNull String url, @NonNull String origFileName, @NonNull Properties props)
+            throws SQLException {
         // Create a copy of the given properties
         Properties newProps = new Properties();
         newProps.putAll(props);
@@ -287,7 +291,7 @@ public abstract class SQLiteConnection implements Connection {
      * @return The extracted file name.
      * @throws IOException
      */
-    private static File extractResource(URL resourceAddr) throws IOException {
+    private static File extractResource(@NonNull URL resourceAddr) throws IOException {
         if (resourceAddr.getProtocol().equals("file")) {
             try {
                 return new File(resourceAddr.toURI());
@@ -390,7 +394,7 @@ public abstract class SQLiteConnection implements Connection {
         db.busy_timeout(timeoutMillis);
     }
 
-    public void setLimit(SQLiteLimits limit, int value) throws SQLException {
+    public void setLimit(@NonNull SQLiteLimits limit, int value) throws SQLException {
         // Calling sqlite3_limit with a negative number is a no-op:
         // https://www.sqlite.org/c3ref/limit.html
         if (value >= 0) {
@@ -398,7 +402,7 @@ public abstract class SQLiteConnection implements Connection {
         }
     }
 
-    public void getLimit(SQLiteLimits limit) throws SQLException {
+    public void getLimit(@NonNull SQLiteLimits limit) throws SQLException {
         db.limit(limit.getId(), -1);
     }
 
@@ -470,7 +474,7 @@ public abstract class SQLiteConnection implements Connection {
      *
      * @param listener The listener to receive update events
      */
-    public void addUpdateListener(SQLiteUpdateListener listener) {
+    public void addUpdateListener(@NonNull SQLiteUpdateListener listener) {
         db.addUpdateListener(listener);
     }
 
@@ -479,7 +483,7 @@ public abstract class SQLiteConnection implements Connection {
      *
      * @param listener The listener to no longer receive update events
      */
-    public void removeUpdateListener(SQLiteUpdateListener listener) {
+    public void removeUpdateListener(@NonNull SQLiteUpdateListener listener) {
         db.removeUpdateListener(listener);
     }
 
@@ -489,7 +493,7 @@ public abstract class SQLiteConnection implements Connection {
      *
      * @param listener The listener to receive commit events
      */
-    public void addCommitListener(SQLiteCommitListener listener) {
+    public void addCommitListener(@NonNull SQLiteCommitListener listener) {
         db.addCommitListener(listener);
     }
 
@@ -498,7 +502,7 @@ public abstract class SQLiteConnection implements Connection {
      *
      * @param listener The listener to no longer receive commit/rollback events.
      */
-    public void removeCommitListener(SQLiteCommitListener listener) {
+    public void removeCommitListener(@NonNull SQLiteCommitListener listener) {
         db.removeCommitListener(listener);
     }
 
@@ -511,7 +515,8 @@ public abstract class SQLiteConnection implements Connection {
      * @return a PRAGMA-sanitized filename
      * @throws SQLException
      */
-    protected static String extractPragmasFromFilename(String url, String filename, Properties prop)
+    protected static String extractPragmasFromFilename(
+            @NonNull String url, @NonNull String filename, @NonNull Properties prop)
             throws SQLException {
         int parameterDelimiter = filename.indexOf('?');
         if (parameterDelimiter == -1) {
@@ -568,7 +573,7 @@ public abstract class SQLiteConnection implements Connection {
         return newFilename;
     }
 
-    protected String transactionPrefix() {
+    protected @Nullable String transactionPrefix() {
         return this.connectionConfig.transactionPrefix();
     }
 
@@ -579,7 +584,7 @@ public abstract class SQLiteConnection implements Connection {
      * @param schema The schema to serialize
      * @return A byte[] holding the database content
      */
-    public byte[] serialize(String schema) throws SQLException {
+    public byte[] serialize(@NonNull String schema) throws SQLException {
         return db.serialize(schema);
     }
 
@@ -591,7 +596,7 @@ public abstract class SQLiteConnection implements Connection {
      * @param schema The schema to serialize
      * @param buff The buffer to deserialize
      */
-    public void deserialize(String schema, byte[] buff) throws SQLException {
+    public void deserialize(@NonNull String schema, byte @NonNull [] buff) throws SQLException {
         db.deserialize(schema, buff);
     }
 }

@@ -21,6 +21,8 @@ import io.roastedroot.sqlite4j.util.Logger;
 import io.roastedroot.sqlite4j.util.LoggerFactory;
 import java.sql.*;
 import java.util.Properties;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 public class JDBC implements Driver {
     private static final Logger logger = LoggerFactory.getLogger(JDBC.class);
@@ -55,7 +57,7 @@ public class JDBC implements Driver {
         return false;
     }
 
-    public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException {
+    public java.util.logging.@Nullable Logger getParentLogger() throws SQLFeatureNotSupportedException {
         // TODO
         return null;
     }
@@ -63,7 +65,7 @@ public class JDBC implements Driver {
     /**
      * @see java.sql.Driver#acceptsURL(java.lang.String)
      */
-    public boolean acceptsURL(String url) {
+    public boolean acceptsURL(@Nullable String url) {
         return isValidURL(url);
     }
 
@@ -73,21 +75,23 @@ public class JDBC implements Driver {
      * @param url
      * @return true if the URL is valid, false otherwise
      */
-    public static boolean isValidURL(String url) {
+    public static boolean isValidURL(@Nullable String url) {
         return url != null && url.toLowerCase().startsWith(PREFIX);
     }
 
     /**
      * @see java.sql.Driver#getPropertyInfo(java.lang.String, java.util.Properties)
      */
-    public DriverPropertyInfo[] getPropertyInfo(String url, Properties info) throws SQLException {
+    public DriverPropertyInfo[] getPropertyInfo(@NonNull String url, @Nullable Properties info)
+            throws SQLException {
         return SQLiteConfig.getDriverPropertyInfo();
     }
 
     /**
      * @see java.sql.Driver#connect(java.lang.String, java.util.Properties)
      */
-    public Connection connect(String url, Properties info) throws SQLException {
+    public @Nullable Connection connect(@NonNull String url, @NonNull Properties info)
+            throws SQLException {
         return createConnection(url, info);
     }
 
@@ -97,7 +101,7 @@ public class JDBC implements Driver {
      * @param url The URL to extract the location from.
      * @return The location to the database.
      */
-    static String extractAddress(String url) {
+    static String extractAddress(@NonNull String url) {
         return url.substring(PREFIX.length());
     }
 
@@ -110,8 +114,8 @@ public class JDBC implements Driver {
      * @throws SQLException
      * @see java.sql.Driver#connect(java.lang.String, java.util.Properties)
      */
-    public static SQLiteConnection createConnection(String url, Properties prop)
-            throws SQLException {
+    public static @Nullable SQLiteConnection createConnection(
+            @NonNull String url, @NonNull Properties prop) throws SQLException {
         if (!isValidURL(url)) return null;
 
         url = url.trim();

@@ -28,4 +28,7 @@
  *
  * @since 2.0
  */
+@NullMarked
 package io.roastedroot.sqlite4j.date;
+
+import org.jspecify.annotations.NullMarked;

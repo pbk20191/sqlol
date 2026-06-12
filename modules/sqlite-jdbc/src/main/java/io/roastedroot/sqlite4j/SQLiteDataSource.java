@@ -32,6 +32,8 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.util.Properties;
 import java.util.logging.Logger;
 import javax.sql.DataSource;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Provides {@link DataSource} API for configuring SQLite database connection
@@ -39,12 +41,12 @@ import javax.sql.DataSource;
  * @author leo
  */
 public class SQLiteDataSource implements DataSource {
-    private SQLiteConfig config;
-    private transient PrintWriter logger;
+    private @NonNull SQLiteConfig config;
+    private transient @Nullable PrintWriter logger;
     private int loginTimeout = 1;
 
-    private String url = JDBC.PREFIX; // use memory database in default
-    private String databaseName = ""; // the name of the current database
+    private @NonNull String url = JDBC.PREFIX; // use memory database in default
+    private @NonNull String databaseName = ""; // the name of the current database
 
     /** Default constructor. */
     public SQLiteDataSource() {
@@ -56,7 +58,7 @@ public class SQLiteDataSource implements DataSource {
      *
      * @param config The configuration for the data source.
      */
-    public SQLiteDataSource(SQLiteConfig config) {
+    public SQLiteDataSource(@NonNull SQLiteConfig config) {
         this.config = config;
     }
 
@@ -65,7 +67,7 @@ public class SQLiteDataSource implements DataSource {
      *
      * @param config The configuration.
      */
-    public void setConfig(SQLiteConfig config) {
+    public void setConfig(@NonNull SQLiteConfig config) {
         this.config = config;
     }
 
@@ -81,7 +83,7 @@ public class SQLiteDataSource implements DataSource {
      *
      * @param url The location of the database file.
      */
-    public void setUrl(String url) {
+    public void setUrl(@NonNull String url) {
         this.url = url;
     }
 
@@ -97,7 +99,7 @@ public class SQLiteDataSource implements DataSource {
      *
      * @param databaseName The name of the database
      */
-    public void setDatabaseName(String databaseName) {
+    public void setDatabaseName(@NonNull String databaseName) {
         this.databaseName = databaseName;
     }
 
@@ -209,7 +211,7 @@ public class SQLiteDataSource implements DataSource {
      * @see <a href="https://www.sqlite.org/pragma.html#pragma_encoding">
      *     https://www.sqlite.org/pragma.html#pragma_encoding</a>
      */
-    public void setEncoding(String encoding) {
+    public void setEncoding(@NonNull String encoding) {
         config.setEncoding(Encoding.getEncoding(encoding));
     }
 
@@ -268,7 +270,7 @@ public class SQLiteDataSource implements DataSource {
      * @see <a href="https://www.sqlite.org/pragma.html#pragma_journal_mode">
      *     https://www.sqlite.org/pragma.html#pragma_journal_mode</a>
      */
-    public void setJournalMode(String mode) {
+    public void setJournalMode(@NonNull String mode) {
         config.setJournalMode(JournalMode.valueOf(mode));
     }
 
@@ -318,7 +320,7 @@ public class SQLiteDataSource implements DataSource {
      * @see <a href="https://www.sqlite.org/pragma.html#pragma_locking_mode">
      *     https://www.sqlite.org/pragma.html#pragma_locking_mode</a>
      */
-    public void setLockingMode(String mode) {
+    public void setLockingMode(@NonNull String mode) {
         config.setLockingMode(LockingMode.valueOf(mode));
     }
 
@@ -402,7 +404,7 @@ public class SQLiteDataSource implements DataSource {
      * @see <a href="https://www.sqlite.org/pragma.html#pragma_synchronous">
      *     https://www.sqlite.org/pragma.html#pragma_synchronous</a>
      */
-    public void setSynchronous(String mode) {
+    public void setSynchronous(@NonNull String mode) {
         config.setSynchronous(SynchronousMode.valueOf(mode));
     }
 
@@ -414,7 +416,7 @@ public class SQLiteDataSource implements DataSource {
      * @see <a
      *     href="https://www.sqlite.org/pragma.html#pragma_temp_store">https://www.sqlite.org/pragma.html#pragma_temp_store</a>
      */
-    public void setTempStore(String storeType) {
+    public void setTempStore(@NonNull String storeType) {
         config.setTempStore(TempStore.valueOf(storeType));
     }
 
@@ -426,7 +428,7 @@ public class SQLiteDataSource implements DataSource {
      * @see <a
      *     href="https://www.sqlite.org/pragma.html#pragma_temp_store_directory">https://www.sqlite.org/pragma.html#pragma_temp_store_directory</a>
      */
-    public void setTempStoreDirectory(String directoryName) {
+    public void setTempStoreDirectory(@NonNull String directoryName) {
         config.setTempStoreDirectory(directoryName);
     }
 
@@ -437,7 +439,7 @@ public class SQLiteDataSource implements DataSource {
      * @see <a
      *     href="https://www.sqlite.org/lang_transaction.html">https://www.sqlite.org/lang_transaction.html</a>
      */
-    public void setTransactionMode(String transactionMode) {
+    public void setTransactionMode(@NonNull String transactionMode) {
         config.setTransactionMode(transactionMode);
     }
 
@@ -467,14 +469,15 @@ public class SQLiteDataSource implements DataSource {
     /**
      * @see javax.sql.DataSource#getConnection()
      */
-    public Connection getConnection() throws SQLException {
+    public @Nullable Connection getConnection() throws SQLException {
         return getConnection(null, null);
     }
 
     /**
      * @see javax.sql.DataSource#getConnection(java.lang.String, java.lang.String)
      */
-    public SQLiteConnection getConnection(String username, String password) throws SQLException {
+    public @Nullable SQLiteConnection getConnection(@Nullable String username, @Nullable String password)
+            throws SQLException {
         Properties p = config.toProperties();
         if (username != null) p.put("user", username);
         if (password != null) p.put("pass", password);
@@ -484,7 +487,7 @@ public class SQLiteDataSource implements DataSource {
     /**
      * @see javax.sql.DataSource#getLogWriter()
      */
-    public PrintWriter getLogWriter() throws SQLException {
+    public @Nullable PrintWriter getLogWriter() throws SQLException {
         return logger;
     }
 
@@ -502,7 +505,7 @@ public class SQLiteDataSource implements DataSource {
     /**
      * @see javax.sql.DataSource#setLogWriter(java.io.PrintWriter)
      */
-    public void setLogWriter(PrintWriter out) throws SQLException {
+    public void setLogWriter(@Nullable PrintWriter out) throws SQLException {
         this.logger = out;
     }
 
@@ -520,7 +523,7 @@ public class SQLiteDataSource implements DataSource {
      * @return True if it is an instance of the current class; false otherwise.
      * @throws SQLException
      */
-    public boolean isWrapperFor(Class<?> iface) throws SQLException {
+    public boolean isWrapperFor(@NonNull Class<?> iface) throws SQLException {
         return iface.isInstance(this);
     }
 
@@ -532,7 +535,7 @@ public class SQLiteDataSource implements DataSource {
      * @throws SQLException
      */
     @SuppressWarnings("unchecked")
-    public <T> T unwrap(Class<T> iface) throws SQLException {
+    public <T> T unwrap(@NonNull Class<T> iface) throws SQLException {
         return (T) this;
     }
 }

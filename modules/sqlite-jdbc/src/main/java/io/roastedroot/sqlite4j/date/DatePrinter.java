@@ -21,6 +21,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * DatePrinter is the "missing" interface for the format methods of {@link java.text.DateFormat}.
@@ -44,7 +46,7 @@ public interface DatePrinter {
      * @param date the date to format
      * @return the formatted string
      */
-    String format(Date date);
+    String format(@NonNull Date date);
 
     /**
      * Formats a {@code Calendar} object.
@@ -52,7 +54,7 @@ public interface DatePrinter {
      * @param calendar the calendar to format
      * @return the formatted string
      */
-    String format(Calendar calendar);
+    String format(@NonNull Calendar calendar);
 
     /**
      * Formats a millisecond {@code long} value into the supplied {@code StringBuffer}.
@@ -61,7 +63,7 @@ public interface DatePrinter {
      * @param buf the buffer to format into
      * @return the specified string buffer
      */
-    StringBuffer format(long millis, StringBuffer buf);
+    StringBuffer format(long millis, @NonNull StringBuffer buf);
 
     /**
      * Formats a {@code Date} object into the supplied {@code StringBuffer} using a {@code
@@ -71,7 +73,7 @@ public interface DatePrinter {
      * @param buf the buffer to format into
      * @return the specified string buffer
      */
-    StringBuffer format(Date date, StringBuffer buf);
+    StringBuffer format(@NonNull Date date, @NonNull StringBuffer buf);
 
     /**
      * Formats a {@code Calendar} object into the supplied {@code StringBuffer}.
@@ -80,7 +82,7 @@ public interface DatePrinter {
      * @param buf the buffer to format into
      * @return the specified string buffer
      */
-    StringBuffer format(Calendar calendar, StringBuffer buf);
+    StringBuffer format(@NonNull Calendar calendar, @NonNull StringBuffer buf);
 
     // Accessors
     // -----------------------------------------------------------------------
@@ -116,5 +118,6 @@ public interface DatePrinter {
      * @param pos the position - ignored
      * @return the buffer passed in
      */
-    StringBuffer format(Object obj, StringBuffer toAppendTo, FieldPosition pos);
+    StringBuffer format(
+            @Nullable Object obj, @NonNull StringBuffer toAppendTo, @NonNull FieldPosition pos);
 }

@@ -24,6 +24,8 @@
 // --------------------------------------
 package io.roastedroot.sqlite4j;
 
+import org.jspecify.annotations.NonNull;
+
 /**
  * SQLite3 error code
  *
@@ -195,7 +197,7 @@ public enum SQLiteErrorCode {
     SQLITE_WARNING_AUTOINDEX(284, "automatic indexing is used");
 
     public final int code;
-    public final String message;
+    public final @NonNull String message;
 
     /**
      * Constructor that applies error code and message.
@@ -203,7 +205,7 @@ public enum SQLiteErrorCode {
      * @param code Error code.
      * @param message Message for the error.
      */
-    SQLiteErrorCode(int code, String message) {
+    SQLiteErrorCode(int code, @NonNull String message) {
         this.code = code;
         this.message = message;
     }

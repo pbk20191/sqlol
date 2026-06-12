@@ -20,10 +20,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /** Implements a JDBC ResultSet. */
 public abstract class CoreResultSet implements Codes {
-    protected final CoreStatement stmt;
+    protected final @NonNull CoreStatement stmt;
 
     /** If the result set does not have any rows. */
     public boolean emptyResultSet = false;
@@ -35,12 +37,12 @@ public abstract class CoreResultSet implements Codes {
     public long maxRows;
 
     /** if null, the RS is closed() */
-    public String[] cols = null;
+    public String @Nullable [] cols = null;
 
     /** same as cols, but used by Meta interface */
-    public String[] colsMeta = null;
+    public String @Nullable [] colsMeta = null;
 
-    protected boolean[][] meta = null;
+    protected boolean @Nullable [][] meta = null;
 
     /** 0 means no limit, must check against maxRows */
     protected int limitRows;
@@ -54,14 +56,14 @@ public abstract class CoreResultSet implements Codes {
     protected int lastCol;
 
     public boolean closeStmt;
-    protected Map<String, Integer> columnNameToIndex = null;
+    protected @Nullable Map<String, Integer> columnNameToIndex = null;
 
     /**
      * Default constructor for a given statement.
      *
      * @param stmt The statement.
      */
-    protected CoreResultSet(CoreStatement stmt) {
+    protected CoreResultSet(@NonNull CoreStatement stmt) {
         this.stmt = stmt;
     }
 
@@ -163,14 +165,14 @@ public abstract class CoreResultSet implements Codes {
         open = false;
     }
 
-    protected Integer findColumnIndexInCache(String col) {
+    protected @Nullable Integer findColumnIndexInCache(@NonNull String col) {
         if (columnNameToIndex == null) {
             return null;
         }
         return columnNameToIndex.get(col);
     }
 
-    protected int addColumnIndexInCache(String col, int index) {
+    protected int addColumnIndexInCache(@NonNull String col, int index) {
         if (columnNameToIndex == null) {
             columnNameToIndex = new HashMap<String, Integer>(cols.length);
         }

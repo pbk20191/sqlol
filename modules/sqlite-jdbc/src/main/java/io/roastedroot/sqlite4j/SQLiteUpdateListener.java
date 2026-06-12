@@ -1,5 +1,7 @@
 package io.roastedroot.sqlite4j;
 
+import org.jspecify.annotations.NonNull;
+
 /** https://www.sqlite.org/c3ref/update_hook.html */
 public interface SQLiteUpdateListener {
 
@@ -9,5 +11,5 @@ public interface SQLiteUpdateListener {
         UPDATE
     }
 
-    void onUpdate(Type type, String database, String table, long rowId);
+    void onUpdate(@NonNull Type type, @NonNull String database, @NonNull String table, long rowId);
 }

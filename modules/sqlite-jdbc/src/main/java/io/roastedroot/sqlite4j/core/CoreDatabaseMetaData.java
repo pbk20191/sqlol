@@ -22,10 +22,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 public abstract class CoreDatabaseMetaData implements DatabaseMetaData {
-    protected SQLiteConnection conn;
-    protected PreparedStatement getTables = null,
+    protected @Nullable SQLiteConnection conn;
+    protected @Nullable PreparedStatement getTables = null,
             getTableTypes = null,
             getTypeInfo = null,
             getCatalogs = null,
@@ -48,7 +50,7 @@ public abstract class CoreDatabaseMetaData implements DatabaseMetaData {
      *
      * @param conn Connection object.
      */
-    protected CoreDatabaseMetaData(SQLiteConnection conn) {
+    protected CoreDatabaseMetaData(@NonNull SQLiteConnection conn) {
         this.conn = conn;
     }
 
@@ -157,7 +159,7 @@ public abstract class CoreDatabaseMetaData implements DatabaseMetaData {
      * @param tableName The string to quote.
      * @return The quoted string.
      */
-    protected static String quote(String tableName) {
+    protected static String quote(@Nullable String tableName) {
         if (tableName == null) {
             return "null";
         } else {
@@ -171,7 +173,7 @@ public abstract class CoreDatabaseMetaData implements DatabaseMetaData {
      * @param val The string to escape.
      * @return The SQL escaped string.
      */
-    protected String escape(final String val) {
+    protected String escape(final @NonNull String val) {
         // TODO: this function is ugly, pass this work off to SQLite, then we
         //       don't have to worry about Unicode 4, other characters needing
         //       escaping, etc.

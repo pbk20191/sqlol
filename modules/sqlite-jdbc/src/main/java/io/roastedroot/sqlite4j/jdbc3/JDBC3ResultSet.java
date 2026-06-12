@@ -24,11 +24,13 @@ import java.util.GregorianCalendar;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 public abstract class JDBC3ResultSet extends CoreResultSet {
     // ResultSet Functions //////////////////////////////////////////
 
-    protected JDBC3ResultSet(CoreStatement stmt) {
+    protected JDBC3ResultSet(@NonNull CoreStatement stmt) {
         super(stmt);
     }
 
@@ -37,7 +39,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
      *
      * @see java.sql.ResultSet#findColumn(java.lang.String)
      */
-    public int findColumn(String col) throws SQLException {
+    public int findColumn(@NonNull String col) throws SQLException {
         checkOpen();
         Integer index = findColumnIndexInCache(col);
         if (index != null) {
@@ -179,7 +181,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getBigDecimal(int)
      */
-    public BigDecimal getBigDecimal(int col) throws SQLException {
+    public @Nullable BigDecimal getBigDecimal(int col) throws SQLException {
         switch (safeGetColumnType(checkCol(col))) {
             case SQLITE_NULL:
                 return null;
@@ -200,7 +202,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getBigDecimal(java.lang.String)
      */
-    public BigDecimal getBigDecimal(String col) throws SQLException {
+    public @Nullable BigDecimal getBigDecimal(@NonNull String col) throws SQLException {
         return getBigDecimal(findColumn(col));
     }
 
@@ -214,14 +216,14 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getBoolean(java.lang.String)
      */
-    public boolean getBoolean(String col) throws SQLException {
+    public boolean getBoolean(@NonNull String col) throws SQLException {
         return getBoolean(findColumn(col));
     }
 
     /**
      * @see java.sql.ResultSet#getBinaryStream(int)
      */
-    public InputStream getBinaryStream(int col) throws SQLException {
+    public @Nullable InputStream getBinaryStream(int col) throws SQLException {
         byte[] bytes = getBytes(col);
         if (bytes != null) {
             return new ByteArrayInputStream(bytes);
@@ -233,7 +235,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getBinaryStream(java.lang.String)
      */
-    public InputStream getBinaryStream(String col) throws SQLException {
+    public @Nullable InputStream getBinaryStream(@NonNull String col) throws SQLException {
         return getBinaryStream(findColumn(col));
     }
 
@@ -247,28 +249,28 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getByte(java.lang.String)
      */
-    public byte getByte(String col) throws SQLException {
+    public byte getByte(@NonNull String col) throws SQLException {
         return getByte(findColumn(col));
     }
 
     /**
      * @see java.sql.ResultSet#getBytes(int)
      */
-    public byte[] getBytes(int col) throws SQLException {
+    public byte @Nullable [] getBytes(int col) throws SQLException {
         return stmt.pointer.safeRun((db, ptr) -> db.column_blob(ptr, markCol(col)));
     }
 
     /**
      * @see java.sql.ResultSet#getBytes(java.lang.String)
      */
-    public byte[] getBytes(String col) throws SQLException {
+    public byte @Nullable [] getBytes(@NonNull String col) throws SQLException {
         return getBytes(findColumn(col));
     }
 
     /**
      * @see java.sql.ResultSet#getCharacterStream(int)
      */
-    public Reader getCharacterStream(int col) throws SQLException {
+    public @Nullable Reader getCharacterStream(int col) throws SQLException {
         String string = getString(col);
         return string == null ? null : new StringReader(string);
     }
@@ -276,14 +278,14 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getCharacterStream(java.lang.String)
      */
-    public Reader getCharacterStream(String col) throws SQLException {
+    public @Nullable Reader getCharacterStream(@NonNull String col) throws SQLException {
         return getCharacterStream(findColumn(col));
     }
 
     /**
      * @see java.sql.ResultSet#getDate(int)
      */
-    public Date getDate(int col) throws SQLException {
+    public @Nullable Date getDate(int col) throws SQLException {
         switch (safeGetColumnType(markCol(col))) {
             case SQLITE_NULL:
                 return null;
@@ -311,7 +313,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getDate(int, java.util.Calendar)
      */
-    public Date getDate(int col, Calendar cal) throws SQLException {
+    public @Nullable Date getDate(int col, @NonNull Calendar cal) throws SQLException {
         requireCalendarNotNull(cal);
         switch (safeGetColumnType(markCol(col))) {
             case SQLITE_NULL:
@@ -345,14 +347,14 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getDate(java.lang.String)
      */
-    public Date getDate(String col) throws SQLException {
+    public @Nullable Date getDate(@NonNull String col) throws SQLException {
         return getDate(findColumn(col), Calendar.getInstance());
     }
 
     /**
      * @see java.sql.ResultSet#getDate(java.lang.String, java.util.Calendar)
      */
-    public Date getDate(String col, Calendar cal) throws SQLException {
+    public @Nullable Date getDate(@NonNull String col, @NonNull Calendar cal) throws SQLException {
         return getDate(findColumn(col), cal);
     }
 
@@ -369,7 +371,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getDouble(java.lang.String)
      */
-    public double getDouble(String col) throws SQLException {
+    public double getDouble(@NonNull String col) throws SQLException {
         return getDouble(findColumn(col));
     }
 
@@ -386,7 +388,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getFloat(java.lang.String)
      */
-    public float getFloat(String col) throws SQLException {
+    public float getFloat(@NonNull String col) throws SQLException {
         return getFloat(findColumn(col));
     }
 
@@ -400,7 +402,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getInt(java.lang.String)
      */
-    public int getInt(String col) throws SQLException {
+    public int getInt(@NonNull String col) throws SQLException {
         return getInt(findColumn(col));
     }
 
@@ -414,7 +416,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getLong(java.lang.String)
      */
-    public long getLong(String col) throws SQLException {
+    public long getLong(@NonNull String col) throws SQLException {
         return getLong(findColumn(col));
     }
 
@@ -428,28 +430,28 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getShort(java.lang.String)
      */
-    public short getShort(String col) throws SQLException {
+    public short getShort(@NonNull String col) throws SQLException {
         return getShort(findColumn(col));
     }
 
     /**
      * @see java.sql.ResultSet#getString(int)
      */
-    public String getString(int col) throws SQLException {
+    public @Nullable String getString(int col) throws SQLException {
         return safeGetColumnText(col);
     }
 
     /**
      * @see java.sql.ResultSet#getString(java.lang.String)
      */
-    public String getString(String col) throws SQLException {
+    public @Nullable String getString(@NonNull String col) throws SQLException {
         return getString(findColumn(col));
     }
 
     /**
      * @see java.sql.ResultSet#getTime(int)
      */
-    public Time getTime(int col) throws SQLException {
+    public @Nullable Time getTime(int col) throws SQLException {
         switch (safeGetColumnType(markCol(col))) {
             case SQLITE_NULL:
                 return null;
@@ -477,7 +479,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getTime(int, java.util.Calendar)
      */
-    public Time getTime(int col, Calendar cal) throws SQLException {
+    public @Nullable Time getTime(int col, @NonNull Calendar cal) throws SQLException {
         requireCalendarNotNull(cal);
         switch (safeGetColumnType(markCol(col))) {
             case SQLITE_NULL:
@@ -511,21 +513,21 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getTime(java.lang.String)
      */
-    public Time getTime(String col) throws SQLException {
+    public @Nullable Time getTime(@NonNull String col) throws SQLException {
         return getTime(findColumn(col));
     }
 
     /**
      * @see java.sql.ResultSet#getTime(java.lang.String, java.util.Calendar)
      */
-    public Time getTime(String col, Calendar cal) throws SQLException {
+    public @Nullable Time getTime(@NonNull String col, @NonNull Calendar cal) throws SQLException {
         return getTime(findColumn(col), cal);
     }
 
     /**
      * @see java.sql.ResultSet#getTimestamp(int)
      */
-    public Timestamp getTimestamp(int col) throws SQLException {
+    public @Nullable Timestamp getTimestamp(int col) throws SQLException {
         switch (safeGetColumnType(markCol(col))) {
             case SQLITE_NULL:
                 return null;
@@ -554,7 +556,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getTimestamp(int, java.util.Calendar)
      */
-    public Timestamp getTimestamp(int col, Calendar cal) throws SQLException {
+    public @Nullable Timestamp getTimestamp(int col, @NonNull Calendar cal) throws SQLException {
         requireCalendarNotNull(cal);
         switch (safeGetColumnType(markCol(col))) {
             case SQLITE_NULL:
@@ -589,21 +591,21 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getTimestamp(java.lang.String)
      */
-    public Timestamp getTimestamp(String col) throws SQLException {
+    public @Nullable Timestamp getTimestamp(@NonNull String col) throws SQLException {
         return getTimestamp(findColumn(col));
     }
 
     /**
      * @see java.sql.ResultSet#getTimestamp(java.lang.String, java.util.Calendar)
      */
-    public Timestamp getTimestamp(String c, Calendar ca) throws SQLException {
+    public @Nullable Timestamp getTimestamp(@NonNull String c, @NonNull Calendar ca) throws SQLException {
         return getTimestamp(findColumn(c), ca);
     }
 
     /**
      * @see java.sql.ResultSet#getObject(int)
      */
-    public Object getObject(int col) throws SQLException {
+    public @Nullable Object getObject(int col) throws SQLException {
         switch (safeGetColumnType(markCol(col))) {
             case SQLITE_INTEGER:
                 long val = getLong(col);
@@ -627,7 +629,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getObject(java.lang.String)
      */
-    public Object getObject(String col) throws SQLException {
+    public @Nullable Object getObject(@NonNull String col) throws SQLException {
         return getObject(findColumn(col));
     }
 
@@ -641,14 +643,14 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSet#getCursorName()
      */
-    public String getCursorName() {
+    public @Nullable String getCursorName() {
         return null;
     }
 
     /**
      * @see java.sql.ResultSet#getWarnings()
      */
-    public SQLWarning getWarnings() {
+    public @Nullable SQLWarning getWarnings() {
         return null;
     }
 
@@ -684,7 +686,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     /**
      * @see java.sql.ResultSetMetaData#getCatalogName(int)
      */
-    public String getCatalogName(int col) throws SQLException {
+    public @Nullable String getCatalogName(int col) throws SQLException {
         return safeGetColumnTableName(col);
     }
 
@@ -896,7 +898,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
         return 0;
     }
 
-    private String getColumnDeclType(int col) throws SQLException {
+    private @Nullable String getColumnDeclType(int col) throws SQLException {
         String declType = stmt.pointer.safeRun((db, ptr) -> db.column_decltype(ptr, checkCol(col)));
 
         if (declType == null) {
@@ -1045,7 +1047,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     }
 
     /** Transforms a Julian Date to java.util.Calendar object. */
-    private Calendar julianDateToCalendar(Double jd) {
+    private @Nullable Calendar julianDateToCalendar(@Nullable Double jd) {
         return julianDateToCalendar(jd, Calendar.getInstance());
     }
 
@@ -1054,7 +1056,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
      * found here:
      * http://java.ittoolbox.com/groups/technical-functional/java-l/java-function-to-convert-julian-date-to-calendar-date-1947446
      */
-    private Calendar julianDateToCalendar(Double jd, Calendar cal) {
+    private @Nullable Calendar julianDateToCalendar(@Nullable Double jd, @NonNull Calendar cal) {
         if (jd == null) {
             return null;
         }
@@ -1114,7 +1116,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
         return cal;
     }
 
-    private void requireCalendarNotNull(Calendar cal) throws SQLException {
+    private void requireCalendarNotNull(@NonNull Calendar cal) throws SQLException {
         if (cal == null) {
             throw new SQLException("Expected a calendar instance.", new IllegalArgumentException());
         }
@@ -1132,11 +1134,11 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
         return stmt.pointer.safeRunDouble((db, ptr) -> db.column_double(ptr, markCol(col)));
     }
 
-    private String safeGetColumnText(int col) throws SQLException {
+    private @Nullable String safeGetColumnText(int col) throws SQLException {
         return stmt.pointer.safeRun((db, ptr) -> db.column_text(ptr, markCol(col)));
     }
 
-    private String safeGetColumnTableName(int col) throws SQLException {
+    private @Nullable String safeGetColumnTableName(int col) throws SQLException {
         return stmt.pointer.safeRun((db, ptr) -> db.column_table_name(ptr, checkCol(col)));
     }
 

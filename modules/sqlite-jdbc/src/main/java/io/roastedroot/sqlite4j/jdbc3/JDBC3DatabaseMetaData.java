@@ -29,11 +29,13 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
 
-    private static String driverName;
-    private static String driverVersion;
+    private static @Nullable String driverName;
+    private static @Nullable String driverVersion;
 
     static {
         try (InputStream sqliteJdbcPropStream =
@@ -54,7 +56,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
         }
     }
 
-    protected JDBC3DatabaseMetaData(SQLiteConnection conn) {
+    protected JDBC3DatabaseMetaData(@NonNull SQLiteConnection conn) {
         super(conn);
     }
 
@@ -285,14 +287,14 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
     /**
      * @see java.sql.DatabaseMetaData#getDriverName()
      */
-    public String getDriverName() {
+    public @Nullable String getDriverName() {
         return driverName;
     }
 
     /**
      * @see java.sql.DatabaseMetaData#getDriverVersion()
      */
-    public String getDriverVersion() {
+    public @Nullable String getDriverVersion() {
         return driverVersion;
     }
 
@@ -396,7 +398,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
     /**
      * @see java.sql.DatabaseMetaData#getUserName()
      */
-    public String getUserName() {
+    public @Nullable String getUserName() {
         return null;
     }
 
@@ -1077,7 +1079,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
      * @see java.sql.DatabaseMetaData#getAttributes(java.lang.String, java.lang.String,
      *     java.lang.String, java.lang.String)
      */
-    public ResultSet getAttributes(String c, String s, String t, String a) throws SQLException {
+    public ResultSet getAttributes(@Nullable String c, @Nullable String s, @Nullable String t, @Nullable String a) throws SQLException {
         if (getAttributes == null) {
             getAttributes =
                     conn.prepareStatement(
@@ -1098,7 +1100,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
      * @see java.sql.DatabaseMetaData#getBestRowIdentifier(java.lang.String, java.lang.String,
      *     java.lang.String, int, boolean)
      */
-    public ResultSet getBestRowIdentifier(String c, String s, String t, int scope, boolean n)
+    public ResultSet getBestRowIdentifier(@Nullable String c, @Nullable String s, @Nullable String t, int scope, boolean n)
             throws SQLException {
         if (getBestRowIdentifier == null) {
             getBestRowIdentifier =
@@ -1115,7 +1117,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
      * @see java.sql.DatabaseMetaData#getColumnPrivileges(java.lang.String, java.lang.String,
      *     java.lang.String, java.lang.String)
      */
-    public ResultSet getColumnPrivileges(String c, String s, String t, String colPat)
+    public ResultSet getColumnPrivileges(@Nullable String c, @Nullable String s, @Nullable String t, @Nullable String colPat)
             throws SQLException {
         if (getColumnPrivileges == null) {
             getColumnPrivileges =
@@ -1137,7 +1139,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
      * @see java.sql.DatabaseMetaData#getColumns(java.lang.String, java.lang.String,
      *     java.lang.String, java.lang.String)
      */
-    public ResultSet getColumns(String c, String s, String tblNamePattern, String colNamePattern)
+    public ResultSet getColumns(@Nullable String c, @Nullable String s, @Nullable String tblNamePattern, @Nullable String colNamePattern)
             throws SQLException {
 
         // get the list of tables matching the pattern (getTables)
@@ -1441,7 +1443,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
      *     java.lang.String, java.lang.String, java.lang.String, java.lang.String)
      */
     public ResultSet getCrossReference(
-            String pc, String ps, String pt, String fc, String fs, String ft) throws SQLException {
+            @Nullable String pc, @Nullable String ps, @Nullable String pt, @Nullable String fc, @Nullable String fs, @Nullable String ft) throws SQLException {
         if (pt == null) {
             return getExportedKeys(fc, fs, ft);
         }
@@ -1500,7 +1502,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
      * @see java.sql.DatabaseMetaData#getPrimaryKeys(java.lang.String, java.lang.String,
      *     java.lang.String)
      */
-    public ResultSet getPrimaryKeys(String c, String s, String table) throws SQLException {
+    public ResultSet getPrimaryKeys(@Nullable String c, @Nullable String s, @Nullable String table) throws SQLException {
         PrimaryKeyFinder pkFinder = new PrimaryKeyFinder(table);
         String[] columns = pkFinder.getColumns();
 
@@ -1549,7 +1551,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
      * @see java.sql.DatabaseMetaData#getExportedKeys(java.lang.String, java.lang.String,
      *     java.lang.String)
      */
-    public ResultSet getExportedKeys(String catalog, String schema, String table)
+    public ResultSet getExportedKeys(@Nullable String catalog, @Nullable String schema, @Nullable String table)
             throws SQLException {
         PrimaryKeyFinder pkFinder = new PrimaryKeyFinder(table);
         String[] pkColumns = pkFinder.getColumns();
@@ -1685,7 +1687,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
         return ((CoreStatement) stat).executeQuery(sql.toString(), true);
     }
 
-    private StringBuilder appendDummyForeignKeyList(StringBuilder sql) {
+    private StringBuilder appendDummyForeignKeyList(@NonNull StringBuilder sql) {
         sql.append("select -1 as ks, '' as ptn, '' as fcn, '' as pcn, ")
                 .append(DatabaseMetaData.importedKeyNoAction)
                 .append(" as ur, ")
@@ -1701,7 +1703,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
      * @see java.sql.DatabaseMetaData#getImportedKeys(java.lang.String, java.lang.String,
      *     java.lang.String)
      */
-    public ResultSet getImportedKeys(String catalog, String schema, String table)
+    public ResultSet getImportedKeys(@Nullable String catalog, @Nullable String schema, @Nullable String table)
             throws SQLException {
         ResultSet rs;
         Statement stat = conn.createStatement();
@@ -1822,7 +1824,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
      * @see java.sql.DatabaseMetaData#getIndexInfo(java.lang.String, java.lang.String,
      *     java.lang.String, boolean, boolean)
      */
-    public ResultSet getIndexInfo(String c, String s, String table, boolean u, boolean approximate)
+    public ResultSet getIndexInfo(@Nullable String c, @Nullable String s, @Nullable String table, boolean u, boolean approximate)
             throws SQLException {
         ResultSet rs;
         Statement stat = conn.createStatement();
@@ -1904,7 +1906,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
      * @see java.sql.DatabaseMetaData#getProcedureColumns(java.lang.String, java.lang.String,
      *     java.lang.String, java.lang.String)
      */
-    public ResultSet getProcedureColumns(String c, String s, String p, String colPat)
+    public ResultSet getProcedureColumns(@Nullable String c, @Nullable String s, @Nullable String p, @Nullable String colPat)
             throws SQLException {
         if (getProcedureColumns == null) {
             getProcedureColumns =
@@ -1922,7 +1924,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
      * @see java.sql.DatabaseMetaData#getProcedures(java.lang.String, java.lang.String,
      *     java.lang.String)
      */
-    public ResultSet getProcedures(String c, String s, String p) throws SQLException {
+    public ResultSet getProcedures(@Nullable String c, @Nullable String s, @Nullable String p) throws SQLException {
         if (getProcedures == null) {
             getProcedures =
                     conn.prepareStatement(
@@ -1937,7 +1939,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
      * @see java.sql.DatabaseMetaData#getSuperTables(java.lang.String, java.lang.String,
      *     java.lang.String)
      */
-    public ResultSet getSuperTables(String c, String s, String t) throws SQLException {
+    public ResultSet getSuperTables(@Nullable String c, @Nullable String s, @Nullable String t) throws SQLException {
         if (getSuperTables == null) {
             getSuperTables =
                     conn.prepareStatement(
@@ -1951,7 +1953,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
      * @see java.sql.DatabaseMetaData#getSuperTypes(java.lang.String, java.lang.String,
      *     java.lang.String)
      */
-    public ResultSet getSuperTypes(String c, String s, String t) throws SQLException {
+    public ResultSet getSuperTypes(@Nullable String c, @Nullable String s, @Nullable String t) throws SQLException {
         if (getSuperTypes == null) {
             getSuperTypes =
                     conn.prepareStatement(
@@ -1966,7 +1968,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
      * @see java.sql.DatabaseMetaData#getTablePrivileges(java.lang.String, java.lang.String,
      *     java.lang.String)
      */
-    public ResultSet getTablePrivileges(String c, String s, String t) throws SQLException {
+    public ResultSet getTablePrivileges(@Nullable String c, @Nullable String s, @Nullable String t) throws SQLException {
         if (getTablePrivileges == null) {
             getTablePrivileges =
                     conn.prepareStatement(
@@ -1982,7 +1984,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
      *     java.lang.String, java.lang.String[])
      */
     public synchronized ResultSet getTables(
-            String c, String s, String tblNamePattern, String[] types) throws SQLException {
+            @Nullable String c, @Nullable String s, @Nullable String tblNamePattern, String @Nullable [] types) throws SQLException {
 
         checkOpen();
 
@@ -2208,7 +2210,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
      * @see java.sql.DatabaseMetaData#getUDTs(java.lang.String, java.lang.String, java.lang.String,
      *     int[])
      */
-    public ResultSet getUDTs(String c, String s, String t, int[] types) throws SQLException {
+    public ResultSet getUDTs(@Nullable String c, @Nullable String s, @Nullable String t, int @Nullable [] types) throws SQLException {
         if (getUDTs == null) {
             getUDTs =
                     conn.prepareStatement(
@@ -2225,7 +2227,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
      * @see java.sql.DatabaseMetaData#getVersionColumns(java.lang.String, java.lang.String,
      *     java.lang.String)
      */
-    public ResultSet getVersionColumns(String c, String s, String t) throws SQLException {
+    public ResultSet getVersionColumns(@Nullable String c, @Nullable String s, @Nullable String t) throws SQLException {
         if (getVersionColumns == null) {
             getVersionColumns =
                     conn.prepareStatement(
@@ -2246,12 +2248,12 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
     }
 
     /** Not implemented yet. */
-    public Struct createStruct(String t, Object[] attr) throws SQLException {
+    public Struct createStruct(@NonNull String t, Object @NonNull [] attr) throws SQLException {
         throw new SQLFeatureNotSupportedException("Not yet implemented by SQLite JDBC driver");
     }
 
     /** Not implemented yet. */
-    public ResultSet getFunctionColumns(String a, String b, String c, String d)
+    public ResultSet getFunctionColumns(@Nullable String a, @Nullable String b, @Nullable String c, @Nullable String d)
             throws SQLException {
         throw new SQLFeatureNotSupportedException("Not yet implemented by SQLite JDBC driver");
     }
@@ -2272,13 +2274,13 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
     /** Parses the sqlite_schema table for a table's primary key */
     class PrimaryKeyFinder {
         /** The table name. */
-        String table;
+        @Nullable String table;
 
         /** The primary key name. */
-        String pkName = null;
+        @Nullable String pkName = null;
 
         /** The column(s) for the primary key. */
-        String[] pkColumns = null;
+        String @Nullable [] pkColumns = null;
 
         /**
          * Constructor.
@@ -2286,7 +2288,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
          * @param table The table for which to get find a primary key.
          * @throws SQLException
          */
-        public PrimaryKeyFinder(String table) throws SQLException {
+        public PrimaryKeyFinder(@Nullable String table) throws SQLException {
             this.table = table;
 
             // specific handling for sqlite_schema and synonyms, so that
@@ -2340,14 +2342,14 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
         /**
          * @return The primary key name if any.
          */
-        public String getName() {
+        public @Nullable String getName() {
             return pkName;
         }
 
         /**
          * @return Array of primary key column(s) if any.
          */
-        public String[] getColumns() {
+        public String @Nullable [] getColumns() {
             return pkColumns;
         }
     }
@@ -2355,15 +2357,15 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
     class ImportedKeyFinder {
 
         /** Pattern used to extract a named primary key. */
-        private final Pattern FK_NAMED_PATTERN =
+        private final @NonNull Pattern FK_NAMED_PATTERN =
                 Pattern.compile(
                         "CONSTRAINT\\s*\"?([A-Za-z_][A-Za-z\\d_]*)?\"?\\s*FOREIGN\\s+KEY\\s*\\((.*?)\\)",
                         Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 
-        private final String fkTableName;
-        private final List<ForeignKey> fkList = new ArrayList<>();
+        private final @NonNull String fkTableName;
+        private final @NonNull List<ForeignKey> fkList = new ArrayList<>();
 
-        public ImportedKeyFinder(String table) throws SQLException {
+        public ImportedKeyFinder(@Nullable String table) throws SQLException {
 
             if (table == null || table.trim().length() == 0) {
                 throw new SQLException("Invalid table name: '" + table + "'");
@@ -2415,7 +2417,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
             }
         }
 
-        private List<String> getForeignKeyNames(String tbl) throws SQLException {
+        private List<String> getForeignKeyNames(@Nullable String tbl) throws SQLException {
             List<String> fkNames = new ArrayList<>();
             if (tbl == null) {
                 return fkNames;
@@ -2450,22 +2452,22 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
 
         class ForeignKey {
 
-            private final String fkName;
-            private final String pkTableName;
-            private final String fkTableName;
-            private final List<String> fkColNames = new ArrayList<>();
-            private final List<String> pkColNames = new ArrayList<>();
-            private final String onUpdate;
-            private final String onDelete;
-            private final String match;
+            private final @Nullable String fkName;
+            private final @Nullable String pkTableName;
+            private final @NonNull String fkTableName;
+            private final @NonNull List<@Nullable String> fkColNames = new ArrayList<>();
+            private final @NonNull List<@Nullable String> pkColNames = new ArrayList<>();
+            private final @Nullable String onUpdate;
+            private final @Nullable String onDelete;
+            private final @Nullable String match;
 
             ForeignKey(
-                    String fkName,
-                    String pkTableName,
-                    String fkTableName,
-                    String onUpdate,
-                    String onDelete,
-                    String match) {
+                    @Nullable String fkName,
+                    @Nullable String pkTableName,
+                    @NonNull String fkTableName,
+                    @Nullable String onUpdate,
+                    @Nullable String onDelete,
+                    @Nullable String match) {
                 this.fkName = fkName;
                 this.pkTableName = pkTableName;
                 this.fkTableName = fkTableName;
@@ -2474,16 +2476,16 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
                 this.match = match;
             }
 
-            public String getFkName() {
+            public @Nullable String getFkName() {
                 return fkName;
             }
 
-            void addColumnMapping(String fkColName, String pkColName) {
+            void addColumnMapping(@Nullable String fkColName, @Nullable String pkColName) {
                 fkColNames.add(fkColName);
                 pkColNames.add(pkColName);
             }
 
-            public String[] getColumnMapping(int colSeq) {
+            public @Nullable String[] getColumnMapping(int colSeq) {
                 return new String[] {fkColNames.get(colSeq), pkColNames.get(colSeq)};
             }
 
@@ -2491,7 +2493,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
                 return fkColNames.size();
             }
 
-            public String getPkTableName() {
+            public @Nullable String getPkTableName() {
                 return pkTableName;
             }
 
@@ -2499,15 +2501,15 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
                 return fkTableName;
             }
 
-            public String getOnUpdate() {
+            public @Nullable String getOnUpdate() {
                 return onUpdate;
             }
 
-            public String getOnDelete() {
+            public @Nullable String getOnDelete() {
                 return onDelete;
             }
 
-            public String getMatch() {
+            public @Nullable String getMatch() {
                 return match;
             }
 
@@ -2541,7 +2543,7 @@ public abstract class JDBC3DatabaseMetaData extends CoreDatabaseMetaData {
      * @param name Identifier name
      * @return Unquoted identifier
      */
-    private String unquoteIdentifier(String name) {
+    private @Nullable String unquoteIdentifier(@Nullable String name) {
         if (name == null) return name;
         name = name.trim();
         if (name.length() > 2

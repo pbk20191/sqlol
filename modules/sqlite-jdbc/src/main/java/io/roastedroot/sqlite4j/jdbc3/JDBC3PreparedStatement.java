@@ -26,10 +26,12 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.Calendar;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 public abstract class JDBC3PreparedStatement extends CorePreparedStatement {
 
-    protected JDBC3PreparedStatement(SQLiteConnection conn, String sql) throws SQLException {
+    protected JDBC3PreparedStatement(@NonNull SQLiteConnection conn, @NonNull String sql) throws SQLException {
         super(conn, sql);
     }
 
@@ -262,7 +264,7 @@ public abstract class JDBC3PreparedStatement extends CorePreparedStatement {
     /**
      * @see java.sql.PreparedStatement#setBigDecimal(int, java.math.BigDecimal)
      */
-    public void setBigDecimal(int pos, BigDecimal value) throws SQLException {
+    public void setBigDecimal(int pos, @Nullable BigDecimal value) throws SQLException {
         batch(pos, value == null ? null : value.toString());
     }
 
@@ -274,7 +276,7 @@ public abstract class JDBC3PreparedStatement extends CorePreparedStatement {
      * @return byte array.
      * @throws SQLException
      */
-    private byte[] readBytes(InputStream istream, int length) throws SQLException {
+    private byte[] readBytes(@NonNull InputStream istream, int length) throws SQLException {
         if (length < 0) {
             throw new SQLException("Error reading stream. Length should be non-negative");
         }
@@ -305,7 +307,7 @@ public abstract class JDBC3PreparedStatement extends CorePreparedStatement {
     /**
      * @see java.sql.PreparedStatement#setBinaryStream(int, java.io.InputStream, int)
      */
-    public void setBinaryStream(int pos, InputStream istream, int length) throws SQLException {
+    public void setBinaryStream(int pos, @Nullable InputStream istream, int length) throws SQLException {
         if (istream == null && length == 0) {
             setBytes(pos, null);
         }
@@ -316,14 +318,14 @@ public abstract class JDBC3PreparedStatement extends CorePreparedStatement {
     /**
      * @see java.sql.PreparedStatement#setAsciiStream(int, java.io.InputStream, int)
      */
-    public void setAsciiStream(int pos, InputStream istream, int length) throws SQLException {
+    public void setAsciiStream(int pos, @Nullable InputStream istream, int length) throws SQLException {
         setUnicodeStream(pos, istream, length);
     }
 
     /**
      * @see java.sql.PreparedStatement#setUnicodeStream(int, java.io.InputStream, int)
      */
-    public void setUnicodeStream(int pos, InputStream istream, int length) throws SQLException {
+    public void setUnicodeStream(int pos, @Nullable InputStream istream, int length) throws SQLException {
         if (istream == null && length == 0) {
             setString(pos, null);
         }
@@ -355,7 +357,7 @@ public abstract class JDBC3PreparedStatement extends CorePreparedStatement {
     /**
      * @see java.sql.PreparedStatement#setBytes(int, byte[])
      */
-    public void setBytes(int pos, byte[] value) throws SQLException {
+    public void setBytes(int pos, byte @Nullable [] value) throws SQLException {
         batch(pos, value);
     }
 
@@ -397,14 +399,14 @@ public abstract class JDBC3PreparedStatement extends CorePreparedStatement {
     /**
      * @see java.sql.PreparedStatement#setNull(int, int, java.lang.String)
      */
-    public void setNull(int pos, int u1, String u2) throws SQLException {
+    public void setNull(int pos, int u1, @Nullable String u2) throws SQLException {
         batch(pos, null);
     }
 
     /**
      * @see java.sql.PreparedStatement#setObject(int, java.lang.Object)
      */
-    public void setObject(int pos, Object value) throws SQLException {
+    public void setObject(int pos, @Nullable Object value) throws SQLException {
         if (value == null) {
             batch(pos, null);
         } else if (value instanceof java.util.Date) {
@@ -433,14 +435,14 @@ public abstract class JDBC3PreparedStatement extends CorePreparedStatement {
     /**
      * @see java.sql.PreparedStatement#setObject(int, java.lang.Object, int)
      */
-    public void setObject(int p, Object v, int t) throws SQLException {
+    public void setObject(int p, @Nullable Object v, int t) throws SQLException {
         setObject(p, v);
     }
 
     /**
      * @see java.sql.PreparedStatement#setObject(int, java.lang.Object, int, int)
      */
-    public void setObject(int p, Object v, int t, int s) throws SQLException {
+    public void setObject(int p, @Nullable Object v, int t, int s) throws SQLException {
         setObject(p, v);
     }
 
@@ -454,14 +456,14 @@ public abstract class JDBC3PreparedStatement extends CorePreparedStatement {
     /**
      * @see java.sql.PreparedStatement#setString(int, java.lang.String)
      */
-    public void setString(int pos, String value) throws SQLException {
+    public void setString(int pos, @Nullable String value) throws SQLException {
         batch(pos, value);
     }
 
     /**
      * @see java.sql.PreparedStatement#setCharacterStream(int, java.io.Reader, int)
      */
-    public void setCharacterStream(int pos, Reader reader, int length) throws SQLException {
+    public void setCharacterStream(int pos, @NonNull Reader reader, int length) throws SQLException {
         try {
             // copy chars from reader to StringBuffer
             StringBuffer sb = new StringBuffer();
@@ -483,14 +485,14 @@ public abstract class JDBC3PreparedStatement extends CorePreparedStatement {
     /**
      * @see java.sql.PreparedStatement#setDate(int, java.sql.Date)
      */
-    public void setDate(int pos, Date x) throws SQLException {
+    public void setDate(int pos, @Nullable Date x) throws SQLException {
         setDate(pos, x, Calendar.getInstance());
     }
 
     /**
      * @see java.sql.PreparedStatement#setDate(int, java.sql.Date, java.util.Calendar)
      */
-    public void setDate(int pos, Date x, Calendar cal) throws SQLException {
+    public void setDate(int pos, @Nullable Date x, @NonNull Calendar cal) throws SQLException {
         if (x == null) {
             setObject(pos, null);
         } else {
@@ -501,14 +503,14 @@ public abstract class JDBC3PreparedStatement extends CorePreparedStatement {
     /**
      * @see java.sql.PreparedStatement#setTime(int, java.sql.Time)
      */
-    public void setTime(int pos, Time x) throws SQLException {
+    public void setTime(int pos, @Nullable Time x) throws SQLException {
         setTime(pos, x, Calendar.getInstance());
     }
 
     /**
      * @see java.sql.PreparedStatement#setTime(int, java.sql.Time, java.util.Calendar)
      */
-    public void setTime(int pos, Time x, Calendar cal) throws SQLException {
+    public void setTime(int pos, @Nullable Time x, @NonNull Calendar cal) throws SQLException {
         if (x == null) {
             setObject(pos, null);
         } else {
@@ -519,14 +521,14 @@ public abstract class JDBC3PreparedStatement extends CorePreparedStatement {
     /**
      * @see java.sql.PreparedStatement#setTimestamp(int, java.sql.Timestamp)
      */
-    public void setTimestamp(int pos, Timestamp x) throws SQLException {
+    public void setTimestamp(int pos, @Nullable Timestamp x) throws SQLException {
         setTimestamp(pos, x, Calendar.getInstance());
     }
 
     /**
      * @see java.sql.PreparedStatement#setTimestamp(int, java.sql.Timestamp, java.util.Calendar)
      */
-    public void setTimestamp(int pos, Timestamp x, Calendar cal) throws SQLException {
+    public void setTimestamp(int pos, @Nullable Timestamp x, @NonNull Calendar cal) throws SQLException {
         if (x == null) {
             setObject(pos, null);
         } else {
@@ -552,23 +554,23 @@ public abstract class JDBC3PreparedStatement extends CorePreparedStatement {
 
     // PreparedStatement ////////////////////////////////////////////
 
-    public void setArray(int i, Array x) throws SQLException {
+    public void setArray(int i, @NonNull Array x) throws SQLException {
         throw unsupported();
     }
 
-    public void setBlob(int i, Blob x) throws SQLException {
+    public void setBlob(int i, @NonNull Blob x) throws SQLException {
         throw unsupported();
     }
 
-    public void setClob(int i, Clob x) throws SQLException {
+    public void setClob(int i, @NonNull Clob x) throws SQLException {
         throw unsupported();
     }
 
-    public void setRef(int i, Ref x) throws SQLException {
+    public void setRef(int i, @NonNull Ref x) throws SQLException {
         throw unsupported();
     }
 
-    public void setURL(int pos, URL x) throws SQLException {
+    public void setURL(int pos, @NonNull URL x) throws SQLException {
         throw unsupported();
     }
 
@@ -576,19 +578,19 @@ public abstract class JDBC3PreparedStatement extends CorePreparedStatement {
      * @see CoreStatement#exec(java.lang.String)
      */
     @Override
-    public boolean execute(String sql) throws SQLException {
+    public boolean execute(@NonNull String sql) throws SQLException {
         throw invalid();
     }
 
-    public boolean execute(String sql, int autoGeneratedKeys) throws SQLException {
+    public boolean execute(@NonNull String sql, int autoGeneratedKeys) throws SQLException {
         throw invalid();
     }
 
-    public boolean execute(String sql, int[] colinds) throws SQLException {
+    public boolean execute(@NonNull String sql, int @NonNull [] colinds) throws SQLException {
         throw invalid();
     }
 
-    public boolean execute(String sql, String[] colnames) throws SQLException {
+    public boolean execute(@NonNull String sql, String @NonNull [] colnames) throws SQLException {
         throw invalid();
     }
 
@@ -596,35 +598,35 @@ public abstract class JDBC3PreparedStatement extends CorePreparedStatement {
      * @see CoreStatement#exec(java.lang.String)
      */
     @Override
-    public int executeUpdate(String sql) throws SQLException {
+    public int executeUpdate(@NonNull String sql) throws SQLException {
         throw invalid();
     }
 
-    public int executeUpdate(String sql, int autoGeneratedKeys) throws SQLException {
+    public int executeUpdate(@NonNull String sql, int autoGeneratedKeys) throws SQLException {
         throw invalid();
     }
 
-    public int executeUpdate(String sql, int[] colinds) throws SQLException {
+    public int executeUpdate(@NonNull String sql, int @NonNull [] colinds) throws SQLException {
         throw invalid();
     }
 
-    public int executeUpdate(String sql, String[] cols) throws SQLException {
+    public int executeUpdate(@NonNull String sql, String @NonNull [] cols) throws SQLException {
         throw invalid();
     }
 
-    public long executeLargeUpdate(String sql) throws SQLException {
+    public long executeLargeUpdate(@NonNull String sql) throws SQLException {
         throw invalid();
     }
 
-    public long executeLargeUpdate(String sql, int autoGeneratedKeys) throws SQLException {
+    public long executeLargeUpdate(@NonNull String sql, int autoGeneratedKeys) throws SQLException {
         throw invalid();
     }
 
-    public long executeLargeUpdate(String sql, int[] colinds) throws SQLException {
+    public long executeLargeUpdate(@NonNull String sql, int @NonNull [] colinds) throws SQLException {
         throw invalid();
     }
 
-    public long executeLargeUpdate(String sql, String[] cols) throws SQLException {
+    public long executeLargeUpdate(@NonNull String sql, String @NonNull [] cols) throws SQLException {
         throw invalid();
     }
 
@@ -632,13 +634,13 @@ public abstract class JDBC3PreparedStatement extends CorePreparedStatement {
      * @see CoreStatement#exec(String)
      */
     @Override
-    public ResultSet executeQuery(String sql) throws SQLException {
+    public ResultSet executeQuery(@NonNull String sql) throws SQLException {
         throw invalid();
     }
 
     /** */
     @Override
-    public void addBatch(String sql) throws SQLException {
+    public void addBatch(@NonNull String sql) throws SQLException {
         throw invalid();
     }
 }

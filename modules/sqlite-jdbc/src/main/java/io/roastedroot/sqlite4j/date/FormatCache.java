@@ -24,6 +24,8 @@ import java.util.Locale;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * FormatCache is a cache and factory for {@link Format}s.
@@ -37,7 +39,7 @@ abstract class FormatCache<F extends Format> {
     /** No date or no time. Used in same parameters as DateFormat.SHORT or DateFormat.LONG */
     static final int NONE = -1;
 
-    private final ConcurrentMap<MultipartKey, F> cInstanceCache =
+    private final @NonNull ConcurrentMap<MultipartKey, F> cInstanceCache =
             new ConcurrentHashMap<MultipartKey, F>(7);
 
     private static final ConcurrentMap<MultipartKey, String> cDateTimeInstanceCache =
@@ -62,7 +64,8 @@ abstract class FormatCache<F extends Format> {
      * @return a pattern based date/time formatter
      * @throws IllegalArgumentException if pattern is invalid or <code>null</code>
      */
-    public F getInstance(final String pattern, TimeZone timeZone, Locale locale) {
+    public F getInstance(
+            final @NonNull String pattern, @Nullable TimeZone timeZone, @Nullable Locale locale) {
         if (pattern == null) {
             throw new NullPointerException("pattern must not be null");
         }
@@ -95,7 +98,8 @@ abstract class FormatCache<F extends Format> {
      * @return a pattern based date/time formatter
      * @throws IllegalArgumentException if pattern is invalid or <code>null</code>
      */
-    protected abstract F createInstance(String pattern, TimeZone timeZone, Locale locale);
+    protected abstract F createInstance(
+            @NonNull String pattern, @NonNull TimeZone timeZone, @NonNull Locale locale);
 
     /**
      * Gets a date/time formatter instance using the specified style, time zone and locale.
@@ -110,10 +114,10 @@ abstract class FormatCache<F extends Format> {
      */
     // This must remain private, see LANG-884
     private F getDateTimeInstance(
-            final Integer dateStyle,
-            final Integer timeStyle,
-            final TimeZone timeZone,
-            Locale locale) {
+            final @Nullable Integer dateStyle,
+            final @Nullable Integer timeStyle,
+            final @Nullable TimeZone timeZone,
+            @Nullable Locale locale) {
         if (locale == null) {
             locale = Locale.getDefault();
         }
@@ -136,8 +140,8 @@ abstract class FormatCache<F extends Format> {
     F getDateTimeInstance(
             final int dateStyle,
             final int timeStyle,
-            final TimeZone timeZone,
-            final Locale locale) {
+            final @Nullable TimeZone timeZone,
+            final @Nullable Locale locale) {
         return getDateTimeInstance(
                 Integer.valueOf(dateStyle), Integer.valueOf(timeStyle), timeZone, locale);
     }
@@ -153,7 +157,7 @@ abstract class FormatCache<F extends Format> {
      * @throws IllegalArgumentException if the Locale has no date/time pattern defined
      */
     // package protected, for access from FastDateFormat; do not make public or protected
-    F getDateInstance(final int dateStyle, final TimeZone timeZone, final Locale locale) {
+    F getDateInstance(final int dateStyle, final @Nullable TimeZone timeZone, final @Nullable Locale locale) {
         return getDateTimeInstance(Integer.valueOf(dateStyle), null, timeZone, locale);
     }
 
@@ -168,7 +172,7 @@ abstract class FormatCache<F extends Format> {
      * @throws IllegalArgumentException if the Locale has no date/time pattern defined
      */
     // package protected, for access from FastDateFormat; do not make public or protected
-    F getTimeInstance(final int timeStyle, final TimeZone timeZone, final Locale locale) {
+    F getTimeInstance(final int timeStyle, final @Nullable TimeZone timeZone, final @Nullable Locale locale) {
         return getDateTimeInstance(null, Integer.valueOf(timeStyle), timeZone, locale);
     }
 
@@ -183,7 +187,9 @@ abstract class FormatCache<F extends Format> {
      */
     // package protected, for access from test code; do not make public or protected
     static String getPatternForStyle(
-            final Integer dateStyle, final Integer timeStyle, final Locale locale) {
+            final @Nullable Integer dateStyle,
+            final @Nullable Integer timeStyle,
+            final @NonNull Locale locale) {
         final MultipartKey key = new MultipartKey(dateStyle, timeStyle, locale);
 
         String pattern = cDateTimeInstanceCache.get(key);
@@ -217,7 +223,7 @@ abstract class FormatCache<F extends Format> {
     // ----------------------------------------------------------------------
     /** Helper class to hold multi-part Map keys */
     private static class MultipartKey {
-        private final Object[] keys;
+        private final Object @NonNull [] keys;
         private int hashCode;
 
         /**
@@ -225,13 +231,13 @@ abstract class FormatCache<F extends Format> {
          *
          * @param keys the set of objects that make up the key. Each key may be null.
          */
-        public MultipartKey(final Object... keys) {
+        public MultipartKey(final @Nullable Object... keys) {
             this.keys = keys;
         }
 
         /** {@inheritDoc} */
         @Override
-        public boolean equals(final Object obj) {
+        public boolean equals(final @Nullable Object obj) {
             // Eliminate the usual boilerplate because
             // this inner static class is only used in a generic ConcurrentHashMap
             // which will not compare against other Object types

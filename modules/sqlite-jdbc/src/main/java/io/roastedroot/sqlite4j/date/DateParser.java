@@ -21,6 +21,8 @@ import java.text.ParsePosition;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * DateParser is the "missing" interface for the parsing methods of {@link java.text.DateFormat}.
@@ -38,7 +40,7 @@ public interface DateParser {
      * @return A <code>Date</code> parsed from the string
      * @throws ParseException if the beginning of the specified string cannot be parsed.
      */
-    Date parse(String source) throws ParseException;
+    Date parse(@NonNull String source) throws ParseException;
 
     /**
      * Equivalent to DateFormat.parse(String, ParsePosition).
@@ -51,7 +53,7 @@ public interface DateParser {
      * @return A <code>Date</code> parsed from the string. In case of error, returns null.
      * @throws NullPointerException if text or pos is null.
      */
-    Date parse(String source, ParsePosition pos);
+    @Nullable Date parse(@NonNull String source, @NonNull ParsePosition pos);
 
     // Accessors
     // -----------------------------------------------------------------------
@@ -87,7 +89,7 @@ public interface DateParser {
      * @throws ParseException if the beginning of the specified string cannot be parsed.
      * @see java.text.DateFormat#parseObject(String)
      */
-    Object parseObject(String source) throws ParseException;
+    Object parseObject(@NonNull String source) throws ParseException;
 
     /**
      * Parse a date/time string according to the given parse position.
@@ -97,5 +99,5 @@ public interface DateParser {
      * @return a <code>java.util.Date</code> object
      * @see java.text.DateFormat#parseObject(String, ParsePosition)
      */
-    Object parseObject(String source, ParsePosition pos);
+    @Nullable Object parseObject(@NonNull String source, @NonNull ParsePosition pos);
 }

@@ -16,6 +16,8 @@
  */
 package io.roastedroot.sqlite4j.date;
 
+import org.jspecify.annotations.NonNull;
+
 /**
  * Provides utilities for manipulating and examining <code>Throwable</code> objects.
  *
@@ -71,7 +73,7 @@ public class ExceptionUtils {
      *     will satisfy the java compiler requirement that all code paths return a value.
      * @throws throwable
      */
-    public static <R> R rethrow(Throwable throwable) {
+    public static <R> R rethrow(@NonNull Throwable throwable) {
         // claim that the typeErasure invocation throws a RuntimeException
         return ExceptionUtils.<R, RuntimeException>typeErasure(throwable);
     }
@@ -82,7 +84,7 @@ public class ExceptionUtils {
      * the exception in the method's throw clause.
      */
     @SuppressWarnings("unchecked")
-    private static <R, T extends Throwable> R typeErasure(Throwable throwable) throws T {
+    private static <R, T extends Throwable> R typeErasure(@NonNull Throwable throwable) throws T {
         throw (T) throwable;
     }
 }

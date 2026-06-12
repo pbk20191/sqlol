@@ -8,21 +8,24 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /** Connection local configurations */
 public class SQLiteConnectionConfig implements Cloneable {
-    private SQLiteConfig.DateClass dateClass = SQLiteConfig.DateClass.INTEGER;
-    private SQLiteConfig.DatePrecision datePrecision =
+    private SQLiteConfig.@NonNull DateClass dateClass = SQLiteConfig.DateClass.INTEGER;
+    private SQLiteConfig.@NonNull DatePrecision datePrecision =
             SQLiteConfig.DatePrecision.MILLISECONDS; // Calendar.SECOND or Calendar.MILLISECOND
-    private String dateStringFormat = DEFAULT_DATE_STRING_FORMAT;
-    private FastDateFormat dateFormat = FastDateFormat.getInstance(dateStringFormat);
+    private @NonNull String dateStringFormat = DEFAULT_DATE_STRING_FORMAT;
+    private @NonNull FastDateFormat dateFormat = FastDateFormat.getInstance(dateStringFormat);
 
     private int transactionIsolation = Connection.TRANSACTION_SERIALIZABLE;
-    private SQLiteConfig.TransactionMode transactionMode = SQLiteConfig.TransactionMode.DEFERRED;
+    private SQLiteConfig.@NonNull TransactionMode transactionMode =
+            SQLiteConfig.TransactionMode.DEFERRED;
     private boolean autoCommit = true;
     private boolean getGeneratedKeys = true;
 
-    public static SQLiteConnectionConfig fromPragmaTable(Properties pragmaTable) {
+    public static SQLiteConnectionConfig fromPragmaTable(@NonNull Properties pragmaTable) {
         return new SQLiteConnectionConfig(
                 SQLiteConfig.DateClass.getDateClass(
                         pragmaTable.getProperty(
@@ -47,11 +50,11 @@ public class SQLiteConnectionConfig implements Cloneable {
     }
 
     public SQLiteConnectionConfig(
-            SQLiteConfig.DateClass dateClass,
-            SQLiteConfig.DatePrecision datePrecision,
-            String dateStringFormat,
+            SQLiteConfig.@NonNull DateClass dateClass,
+            SQLiteConfig.@NonNull DatePrecision datePrecision,
+            @NonNull String dateStringFormat,
             int transactionIsolation,
-            SQLiteConfig.TransactionMode transactionMode,
+            SQLiteConfig.@NonNull TransactionMode transactionMode,
             boolean autoCommit,
             boolean getGeneratedKeys) {
         setDateClass(dateClass);
@@ -82,7 +85,7 @@ public class SQLiteConnectionConfig implements Cloneable {
         return dateClass;
     }
 
-    public void setDateClass(SQLiteConfig.DateClass dateClass) {
+    public void setDateClass(SQLiteConfig.@NonNull DateClass dateClass) {
         this.dateClass = dateClass;
     }
 
@@ -90,7 +93,7 @@ public class SQLiteConnectionConfig implements Cloneable {
         return datePrecision;
     }
 
-    public void setDatePrecision(SQLiteConfig.DatePrecision datePrecision) {
+    public void setDatePrecision(SQLiteConfig.@NonNull DatePrecision datePrecision) {
         this.datePrecision = datePrecision;
     }
 
@@ -98,7 +101,7 @@ public class SQLiteConnectionConfig implements Cloneable {
         return dateStringFormat;
     }
 
-    public void setDateStringFormat(String dateStringFormat) {
+    public void setDateStringFormat(@NonNull String dateStringFormat) {
         this.dateStringFormat = dateStringFormat;
         this.dateFormat = FastDateFormat.getInstance(dateStringFormat);
     }
@@ -128,7 +131,7 @@ public class SQLiteConnectionConfig implements Cloneable {
     }
 
     @SuppressWarnings("deprecation")
-    public void setTransactionMode(SQLiteConfig.TransactionMode transactionMode) {
+    public void setTransactionMode(SQLiteConfig.@NonNull TransactionMode transactionMode) {
         this.transactionMode = transactionMode;
     }
 
@@ -149,12 +152,12 @@ public class SQLiteConnectionConfig implements Cloneable {
         beginCommandMap.put(SQLiteConfig.TransactionMode.EXCLUSIVE, "begin exclusive;");
     }
 
-    String transactionPrefix() {
+    @Nullable String transactionPrefix() {
         return beginCommandMap.get(transactionMode);
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) return true;
         if (!(o instanceof SQLiteConnectionConfig)) return false;
         SQLiteConnectionConfig that = (SQLiteConnectionConfig) o;

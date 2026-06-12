@@ -19,6 +19,8 @@ import io.roastedroot.sqlite4j.core.Codes;
 import io.roastedroot.sqlite4j.core.DB;
 import java.sql.Connection;
 import java.sql.SQLException;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Provides an interface for creating SQLite user-defined functions.
@@ -52,8 +54,8 @@ public abstract class Function {
      */
     public static final int FLAG_DETERMINISTIC = 0x800;
 
-    private SQLiteConnection conn;
-    private DB db;
+    private @Nullable SQLiteConnection conn;
+    private @Nullable DB db;
 
     long context = 0; // pointer sqlite3_context*
     long value = 0; // pointer sqlite3_value**
@@ -87,7 +89,8 @@ public abstract class Function {
      * @param name The name of the function.
      * @param f The function to register.
      */
-    public static void create(Connection conn, String name, Function f) throws SQLException {
+    public static void create(@NonNull Connection conn, @NonNull String name, @NonNull Function f)
+            throws SQLException {
         create(conn, name, f, 0);
     }
 
@@ -99,7 +102,8 @@ public abstract class Function {
      * @param f The function to register.
      * @param flags Extra flags to pass, such as {@link #FLAG_DETERMINISTIC}
      */
-    public static void create(Connection conn, String name, Function f, int flags)
+    public static void create(
+            @NonNull Connection conn, @NonNull String name, @NonNull Function f, int flags)
             throws SQLException {
         create(conn, name, f, -1, flags);
     }
@@ -113,7 +117,12 @@ public abstract class Function {
      * @param nArgs The number of arguments that the function takes.
      * @param flags Extra flags to pass, such as {@link #FLAG_DETERMINISTIC}
      */
-    public static void create(Connection conn, String name, Function f, int nArgs, int flags)
+    public static void create(
+            @NonNull Connection conn,
+            @NonNull String name,
+            @NonNull Function f,
+            int nArgs,
+            int flags)
             throws SQLException {
         if (!(conn instanceof SQLiteConnection)) {
             throw new SQLException("connection must be to an SQLite db");
@@ -142,7 +151,8 @@ public abstract class Function {
      * @param nArgs Ignored.
      * @throws SQLException
      */
-    public static void destroy(Connection conn, String name, int nArgs) throws SQLException {
+    public static void destroy(@NonNull Connection conn, @NonNull String name, int nArgs)
+            throws SQLException {
         if (!(conn instanceof SQLiteConnection)) {
             throw new SQLException("connection must be to an SQLite db");
         }
@@ -156,7 +166,7 @@ public abstract class Function {
      * @param name The name of the function.
      * @throws SQLException
      */
-    public static void destroy(Connection conn, String name) throws SQLException {
+    public static void destroy(@NonNull Connection conn, @NonNull String name) throws SQLException {
         destroy(conn, name, -1);
     }
 
@@ -180,7 +190,7 @@ public abstract class Function {
      *
      * @param value
      */
-    protected final synchronized void result(byte[] value) throws SQLException {
+    protected final synchronized void result(byte @NonNull [] value) throws SQLException {
         checkContext();
         db.result_blob(context, value);
     }
@@ -226,7 +236,7 @@ public abstract class Function {
      *
      * @param value
      */
-    protected final synchronized void result(String value) throws SQLException {
+    protected final synchronized void result(@NonNull String value) throws SQLException {
         checkContext();
         db.result_text(context, value);
     }
@@ -236,7 +246,7 @@ public abstract class Function {
      *
      * @param err
      */
-    protected final synchronized void error(String err) throws SQLException {
+    protected final synchronized void error(@NonNull String err) throws SQLException {
         checkContext();
         db.result_error(context, err);
     }

@@ -6,18 +6,20 @@ import java.sql.ResultSet;
 import java.sql.RowIdLifetime;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 public class JDBC4DatabaseMetaData extends JDBC3DatabaseMetaData {
-    public JDBC4DatabaseMetaData(SQLiteConnection conn) {
+    public JDBC4DatabaseMetaData(@NonNull SQLiteConnection conn) {
         super(conn);
     }
 
     // JDBC 4
-    public <T> T unwrap(Class<T> iface) throws ClassCastException {
+    public <T> T unwrap(@NonNull Class<T> iface) throws ClassCastException {
         return iface.cast(this);
     }
 
-    public boolean isWrapperFor(Class<?> iface) {
+    public boolean isWrapperFor(@NonNull Class<?> iface) {
         return iface.isInstance(this);
     }
 
@@ -25,7 +27,8 @@ public class JDBC4DatabaseMetaData extends JDBC3DatabaseMetaData {
         throw new SQLFeatureNotSupportedException();
     }
 
-    public ResultSet getSchemas(String catalog, String schemaPattern) throws SQLException {
+    public ResultSet getSchemas(@Nullable String catalog, @Nullable String schemaPattern)
+            throws SQLException {
         throw new SQLFeatureNotSupportedException();
     }
 
@@ -41,13 +44,19 @@ public class JDBC4DatabaseMetaData extends JDBC3DatabaseMetaData {
         throw new SQLFeatureNotSupportedException();
     }
 
-    public ResultSet getFunctions(String catalog, String schemaPattern, String functionNamePattern)
+    public ResultSet getFunctions(
+            @Nullable String catalog,
+            @Nullable String schemaPattern,
+            @Nullable String functionNamePattern)
             throws SQLException {
         throw new SQLFeatureNotSupportedException();
     }
 
     public ResultSet getPseudoColumns(
-            String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern)
+            @Nullable String catalog,
+            @Nullable String schemaPattern,
+            @Nullable String tableNamePattern,
+            @Nullable String columnNamePattern)
             throws SQLException {
         throw new SQLFeatureNotSupportedException();
     }

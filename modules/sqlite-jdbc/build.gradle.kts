@@ -18,6 +18,8 @@ java {
 dependencies {
     // sqlite4j(Apache-2.0) 벤더링 + WorkerDB — 실제 엔진은 :modules:sqlite 의 워커 아키텍처
     implementation(project(":modules:sqlite"))
+    // nullability 어노테이션 (Kotlin 리팩토링 준비) — CLASS 리텐션이라 런타임 불필요
+    compileOnly("org.jspecify:jspecify:1.0.0")
     // 벤더링 원본의 optional 의존성 (util/LoggerFactory 가 reflection 으로 유무 감지)
     compileOnly("org.slf4j:slf4j-api:2.0.13")
 

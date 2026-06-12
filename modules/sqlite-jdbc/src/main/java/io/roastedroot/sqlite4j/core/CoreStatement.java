@@ -23,20 +23,22 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 public abstract class CoreStatement implements Codes {
-    public final SQLiteConnection conn;
-    protected final CoreResultSet rs;
+    public final @NonNull SQLiteConnection conn;
+    protected final @NonNull CoreResultSet rs;
 
-    public SafeStmtPtr pointer;
-    protected String sql = null;
+    public @Nullable SafeStmtPtr pointer;
+    protected @Nullable String sql = null;
 
     protected int batchPos;
-    protected Object[] batch = null;
+    protected Object @Nullable [] batch = null;
     protected boolean resultsWaiting = false;
 
-    private Statement generatedKeysStat = null;
-    private ResultSet generatedKeysRs = null;
+    private @Nullable Statement generatedKeysStat = null;
+    private @Nullable ResultSet generatedKeysRs = null;
 
     // pattern for matching insert statements of the general format starting with INSERT or REPLACE.
     // CTEs used prior to the insert or replace keyword are also be permitted.
@@ -45,7 +47,7 @@ public abstract class CoreStatement implements Codes {
                     "^\\s*(?:with\\s+.+\\(.+?\\))*\\s*(?:insert|replace)\\s*",
                     Pattern.DOTALL | Pattern.CASE_INSENSITIVE);
 
-    protected CoreStatement(SQLiteConnection c) {
+    protected CoreStatement(@NonNull SQLiteConnection c) {
         conn = c;
         rs = new JDBC4ResultSet(this);
     }
@@ -111,7 +113,7 @@ public abstract class CoreStatement implements Codes {
      * @return True if the ResultSet has at least one row; false otherwise.
      * @throws SQLException If the given SQL statement is null or no database is open.
      */
-    protected boolean exec(String sql) throws SQLException {
+    protected boolean exec(@NonNull String sql) throws SQLException {
         if (sql == null) throw new SQLException("SQLiteJDBC internal error: sql==null");
         if (rs.isOpen()) throw new SQLException("SQLite JDBC internal error: rs.isOpen() on exec.");
 
@@ -153,7 +155,7 @@ public abstract class CoreStatement implements Codes {
         conn.setFirstStatementExecuted(true);
     }
 
-    public abstract ResultSet executeQuery(String sql, boolean closeStmt) throws SQLException;
+    public abstract ResultSet executeQuery(@NonNull String sql, boolean closeStmt) throws SQLException;
 
     protected void checkIndex(int index) throws SQLException {
         if (batch == null) {

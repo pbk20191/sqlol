@@ -2,6 +2,7 @@ package io.roastedroot.sqlite4j.util;
 
 import java.util.function.Supplier;
 import java.util.logging.Level;
+import org.jspecify.annotations.NonNull;
 
 /**
  * A factory for {@link Logger} instances that uses SLF4J if present, falling back on a
@@ -27,7 +28,7 @@ public class LoggerFactory {
      * @param hostClass the host class from which log messages will be issued
      * @return a Logger
      */
-    public static Logger getLogger(Class<?> hostClass) {
+    public static Logger getLogger(@NonNull Class<?> hostClass) {
         if (USE_SLF4J) {
             return new SLF4JLogger(hostClass);
         }
@@ -36,35 +37,35 @@ public class LoggerFactory {
     }
 
     private static class JDKLogger implements Logger {
-        final java.util.logging.Logger logger;
+        final java.util.logging.@NonNull Logger logger;
 
-        public JDKLogger(Class<?> hostClass) {
+        public JDKLogger(@NonNull Class<?> hostClass) {
             logger = java.util.logging.Logger.getLogger(hostClass.getCanonicalName());
         }
 
         @Override
-        public void trace(Supplier<String> message) {
+        public void trace(@NonNull Supplier<String> message) {
             if (logger.isLoggable(Level.FINEST)) {
                 logger.log(Level.FINEST, message.get());
             }
         }
 
         @Override
-        public void info(Supplier<String> message) {
+        public void info(@NonNull Supplier<String> message) {
             if (logger.isLoggable(Level.INFO)) {
                 logger.log(Level.INFO, message.get());
             }
         }
 
         @Override
-        public void warn(Supplier<String> message) {
+        public void warn(@NonNull Supplier<String> message) {
             if (logger.isLoggable(Level.WARNING)) {
                 logger.log(Level.WARNING, message.get());
             }
         }
 
         @Override
-        public void error(Supplier<String> message, Throwable t) {
+        public void error(@NonNull Supplier<String> message, @NonNull Throwable t) {
             if (logger.isLoggable(Level.SEVERE)) {
                 logger.log(Level.SEVERE, message.get(), t);
             }
@@ -72,35 +73,35 @@ public class LoggerFactory {
     }
 
     private static class SLF4JLogger implements Logger {
-        final org.slf4j.Logger logger;
+        final org.slf4j.@NonNull Logger logger;
 
-        SLF4JLogger(Class<?> hostClass) {
+        SLF4JLogger(@NonNull Class<?> hostClass) {
             logger = org.slf4j.LoggerFactory.getLogger(hostClass);
         }
 
         @Override
-        public void trace(Supplier<String> message) {
+        public void trace(@NonNull Supplier<String> message) {
             if (logger.isTraceEnabled()) {
                 logger.trace(message.get());
             }
         }
 
         @Override
-        public void info(Supplier<String> message) {
+        public void info(@NonNull Supplier<String> message) {
             if (logger.isInfoEnabled()) {
                 logger.info(message.get());
             }
         }
 
         @Override
-        public void warn(Supplier<String> message) {
+        public void warn(@NonNull Supplier<String> message) {
             if (logger.isWarnEnabled()) {
                 logger.warn(message.get());
             }
         }
 
         @Override
-        public void error(Supplier<String> message, Throwable t) {
+        public void error(@NonNull Supplier<String> message, @NonNull Throwable t) {
             if (logger.isErrorEnabled()) {
                 logger.error(message.get(), t);
             }
