@@ -1,4 +1,4 @@
-package org.example.demo1webfl
+package org.example.sqlol
 
 import io.netty.channel.IoRegistration
 import io.netty.channel.ManualIoEventLoop

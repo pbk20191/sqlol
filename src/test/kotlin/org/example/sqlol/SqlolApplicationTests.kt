@@ -1,10 +1,10 @@
-package org.example.demo1webfl
+package org.example.sqlol
 
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 
 @SpringBootTest
-class Demo1webflApplicationTests {
+class SqlolApplicationTests {
 
     @Test
     fun contextLoads() {

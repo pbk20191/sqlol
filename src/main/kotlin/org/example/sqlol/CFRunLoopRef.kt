@@ -1,4 +1,4 @@
-package org.example.demo1webfl
+package org.example.sqlol
 
 import java.lang.foreign.Arena
 import java.lang.foreign.FunctionDescriptor

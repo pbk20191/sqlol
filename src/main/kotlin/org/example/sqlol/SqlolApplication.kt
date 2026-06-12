@@ -1,4 +1,4 @@
-package org.example.demo1webfl
+package org.example.sqlol
 
 import io.netty.channel.MultiThreadIoEventLoopGroup
 import io.netty.channel.nio.NioIoHandler
@@ -16,7 +16,7 @@ import java.util.concurrent.ThreadFactory
 //@EnableR2dbcRepositories
 @EnableWebFlux
 @SpringBootApplication
-class Demo1webflApplication {
+class SqlolApplication {
 
     class VFactory @JvmOverloads constructor(
         private val factory: ThreadFactory = Thread.ofVirtual().factory()
@@ -28,7 +28,7 @@ class Demo1webflApplication {
             System.setProperty("jdk.pollerMode", "2")
             System.setProperty("reactor.schedulers.defaultBoundedElasticOnVirtualThreads", "true")
             System.setProperty("java.awt.headless", "true")
-            runApplication<Demo1webflApplication>(*args) {
+            runApplication<SqlolApplication>(*args) {
 
                 this.setWebApplicationType(WebApplicationType.REACTIVE)
                 this.setHeadless(true)

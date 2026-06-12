@@ -1,4 +1,4 @@
-package org.example.demo1webfl
+package org.example.sqlol
 
 //import io.r2dbc.spi.ConnectionFactory
 //import org.springframework.data.r2dbc.config.AbstractR2dbcConfiguration
@@ -33,7 +33,7 @@ import javax.sql.DataSource
 
 @Configuration
 @EnableJpaRepositories
-@EntityScan(basePackages = ["org.example.demo1webfl.models"])
+@EntityScan(basePackages = ["org.example.sqlol.models"])
 //@EnableR2dbcRepositories
 class DataBaseConfig {
 
@@ -52,7 +52,7 @@ class DataBaseConfig {
 //    ) = object: BeanPostProcessor {
 //        override fun postProcessBeforeInitialization(bean: Any, beanName: String): Any? {
 //            if (bean is HikariDataSource) {
-////                bean.threadFactory = Demo1webflApplication.VFactory()
+////                bean.threadFactory = SqlolApplication.VFactory()
 //                bean.scheduledExecutor = virtualExecutor
 //
 //            }

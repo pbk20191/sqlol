@@ -8,7 +8,7 @@ pluginManagement {
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
-rootProject.name = "demo1webfl"
+rootProject.name = "sqlol"
 
 include("modules:sqlite")
 project(":modules:sqlite")

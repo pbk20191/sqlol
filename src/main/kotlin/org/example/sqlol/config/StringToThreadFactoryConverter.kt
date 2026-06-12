@@ -1,4 +1,4 @@
-package org.example.demo1webfl.config
+package org.example.sqlol.config
 
 import org.springframework.boot.context.properties.ConfigurationPropertiesBinding
 import org.springframework.core.convert.converter.Converter

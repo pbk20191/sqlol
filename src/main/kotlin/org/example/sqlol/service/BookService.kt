@@ -1,6 +1,6 @@
-package org.example.demo1webfl.service
+package org.example.sqlol.service
 
-import org.example.demo1webfl.repository.BookJpaRepository
+import org.example.sqlol.repository.BookJpaRepository
 import org.springframework.stereotype.Service
 
 @Service

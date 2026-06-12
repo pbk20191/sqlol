@@ -1,4 +1,4 @@
-package org.example.demo1webfl.models
+package org.example.sqlol.models
 
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue

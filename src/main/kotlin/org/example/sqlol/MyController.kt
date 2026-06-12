@@ -1,4 +1,4 @@
-package org.example.demo1webfl
+package org.example.sqlol
 
 //import org.springframework.boot.autoconfigure.integration.IntegrationProperties
 //import org.springframework.boot.autoconfigure.rsocket.RSocketMessageHandlerCustomizer

@@ -54,6 +54,9 @@ dependencies {
 }
 
 kotlin {
+    // 모듈들과 동일하게 toolchain 으로 Java/Kotlin JVM 타깃을 일치시킨다 (JDK 27 환경에서
+    // compileJava(27) vs compileKotlin(25) 불일치로 빌드가 깨지던 것을 해소 — 주석돼 있던 의도 복원).
+    jvmToolchain(25)
     compilerOptions {
         freeCompilerArgs.addAll("-Xjsr305=strict")
     }
