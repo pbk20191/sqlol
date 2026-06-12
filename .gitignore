@@ -1,0 +1,65 @@
+HELP.md
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### Kotlin ###
+.kotlin
+
+### macOS ###
+.DS_Store
+
+### Claude Code (머신-로컬 권한/설정) ###
+.claude/settings.local.json
+
+### 런타임 데이터 (H2 임베디드 DB) ###
+/data/
+*.mv.db
+*.trace.db
+
+### sqlite 모듈 — wasm 빌드 중간물 (build.sh 가 재생성; 정본 .wasm 은 chicory-aot/ 에 추적) ###
+# wasm-lib/out/ 는 위의 `out/` 규칙이 이미 무시. 아래는 명시적 보강:
+*.o
+
+### wasm 백업 스냅샷 (역사 보관용, 대용량 — 정본 .wasm 만 추적) ###
+*.pre-amalg
+*.prev
+*.emscripten.bak
+
+### 테스트가 만드는 임시 DB 산출물 ###
+*.db-wal
+*.db-shm
+*.jvmlock
