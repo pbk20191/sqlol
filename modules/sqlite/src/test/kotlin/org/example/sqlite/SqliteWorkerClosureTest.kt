@@ -1,12 +1,13 @@
 package org.example.sqlite
 
+import org.example.sqlite.core.SqliteWorker
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
 
 /**
- * [SqliteWorker] 직접 실행 모델 (§9.2) — caller 스레드가 [SqliteWorker.run] 으로 임의 다단계
+ * [org.example.sqlite.core.SqliteWorker] 직접 실행 모델 (§9.2) — caller 스레드가 [org.example.sqlite.core.SqliteWorker.run] 으로 임의 다단계
  * 클로저를 per-child 락 직렬화 하에 직접 실행한다 (큐/future 마샬링 없음).
  *
  * 핵심 검증: (1) 한 클로저 안의 다단계 트랜잭션 (락 보유 = 인터리빙 없음), (2) raw export 조립으로

@@ -662,7 +662,7 @@ unix-excl(힙 wal-index, 프로세스 내 공유)은 단일 JVM 에 이상적으
 §10 절단면 분석의 실행: xerial 포크인 sqlite4j(Apache-2.0, 라이선스 보존 `LICENSE.sqlite4j`)의 main 소스
 53파일을 벤더링하고, 그들의 wasm 구현(core/wasm/ 7파일 + WasmDB/WasmDBFactory + ZeroFs 의존)을 우리
 워커 아키텍처로 **통째 교체**. 패치는 3파일뿐: SQLiteConnection(팩토리 참조 2곳), SQLiteJDBCLoader
-(version()), + 신규 WorkerDB/WorkerDBFactory. 패키지는 업스트림 그대로(io.roastedroot.sqlite4j) —
+(version()), + 신규 WorkerDB/WorkerDBFactory. 패키지는 업스트림 그대로(org.example.sqlite.jdbc) —
 테스트 코퍼스 무수정 이식 + 업스트림 diff 추적용. URL prefix 도 그들 그대로 `jdbc:sqlite:`.
 
 **3층 구조:**
