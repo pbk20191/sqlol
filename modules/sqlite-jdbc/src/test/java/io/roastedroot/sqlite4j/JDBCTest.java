@@ -67,7 +67,7 @@ public class JDBCTest {
                 (SQLiteConnection)
                         DriverManager.getConnection(
                                 "jdbc:sqlite::memory:?jdbc.explicit_readonly=true");
-        assertThat(connection.getDatabase().getConfig().isExplicitReadOnly()).isTrue();
+        assertThat(connection.getDatabase().config.isExplicitReadOnly()).isTrue();
     }
 
     @Test
@@ -188,7 +188,7 @@ public class JDBCTest {
     @Test
     public void jdbcHammer() throws Exception {
         final SQLiteDataSource dataSource = createDatasourceWithExplicitReadonly();
-        dataSource.setUrl("jdbc:sqlite:test.db");
+        dataSource.url = "jdbc:sqlite:test.db";
         Connection initConnection = dataSource.getConnection();
         initConnection.setAutoCommit(false);
         try (Statement stmt = initConnection.createStatement()) {

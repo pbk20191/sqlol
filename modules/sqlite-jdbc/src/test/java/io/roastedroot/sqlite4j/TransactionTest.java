@@ -349,7 +349,7 @@ public class TransactionTest {
         File tmpFile = File.createTempFile("test-trans", ".db", tempDir);
 
         SQLiteDataSource ds = new SQLiteDataSource();
-        ds.setUrl("jdbc:sqlite:" + tmpFile.getAbsolutePath());
+        ds.url = "jdbc:sqlite:" + tmpFile.getAbsolutePath();
 
         // deferred
         try (SQLiteConnection con = (SQLiteConnection) ds.getConnection()) {

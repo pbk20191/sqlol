@@ -87,11 +87,11 @@ public class SQLiteDataSourceTest {
         final SQLiteDataSource ds = new SQLiteDataSource();
         ds.setBusyTimeout(1234);
         assertThat(
-                        ds.getConfig()
+                        ds.config
                                 .toProperties()
                                 .getProperty(SQLiteConfig.Pragma.BUSY_TIMEOUT.pragmaName))
                 .isEqualTo("1234");
-        assertThat(ds.getConfig().getBusyTimeout()).isEqualTo(1234);
+        assertThat(ds.config.getBusyTimeout()).isEqualTo(1234);
     }
 
     @Test
@@ -99,12 +99,12 @@ public class SQLiteDataSourceTest {
         final SQLiteDataSource ds = new SQLiteDataSource();
         ds.setGetGeneratedKeys(false);
         assertThat(
-                        ds.getConfig()
+                        ds.config
                                 .toProperties()
                                 .getProperty(
                                         SQLiteConfig.Pragma.JDBC_GET_GENERATED_KEYS.pragmaName))
                 .isEqualTo("false");
-        assertThat(ds.getConfig().isGetGeneratedKeys()).isEqualTo(false);
+        assertThat(ds.config.isGetGeneratedKeys()).isEqualTo(false);
         assertThat(
                         ((SQLiteConnection) ds.getConnection())
                                 .getConnectionConfig()
@@ -113,12 +113,12 @@ public class SQLiteDataSourceTest {
 
         ds.setGetGeneratedKeys(true);
         assertThat(
-                        ds.getConfig()
+                        ds.config
                                 .toProperties()
                                 .getProperty(
                                         SQLiteConfig.Pragma.JDBC_GET_GENERATED_KEYS.pragmaName))
                 .isEqualTo("true");
-        assertThat(ds.getConfig().isGetGeneratedKeys()).isEqualTo(true);
+        assertThat(ds.config.isGetGeneratedKeys()).isEqualTo(true);
         assertThat(
                         ((SQLiteConnection) ds.getConnection())
                                 .getConnectionConfig()

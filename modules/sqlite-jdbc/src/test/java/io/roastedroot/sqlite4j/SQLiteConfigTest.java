@@ -22,13 +22,13 @@ public class SQLiteConfigTest {
 
         Properties properties = config.toProperties();
 
-        assertThat(properties.getProperty(SQLiteConfig.Pragma.DATE_STRING_FORMAT.getPragmaName()))
+        assertThat(properties.getProperty(Pragma.DATE_STRING_FORMAT.pragmaName))
                 .isEqualTo("yyyy/mm/dd");
-        assertThat(properties.getProperty(SQLiteConfig.Pragma.DATE_PRECISION.getPragmaName()))
+        assertThat(properties.getProperty(Pragma.DATE_PRECISION.pragmaName))
                 .isEqualTo(SQLiteConfig.DatePrecision.SECONDS.name());
-        assertThat(properties.getProperty(SQLiteConfig.Pragma.DATE_CLASS.getPragmaName()))
+        assertThat(properties.getProperty(Pragma.DATE_CLASS.pragmaName))
                 .isEqualTo(SQLiteConfig.DateClass.REAL.name());
-        assertThat(properties.getProperty(Pragma.JDBC_GET_GENERATED_KEYS.getPragmaName()))
+        assertThat(properties.getProperty(Pragma.JDBC_GET_GENERATED_KEYS.pragmaName))
                 .isEqualTo("false");
     }
 
