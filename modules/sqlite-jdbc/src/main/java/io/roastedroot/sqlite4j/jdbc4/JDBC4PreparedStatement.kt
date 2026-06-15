@@ -2,6 +2,7 @@ package io.roastedroot.sqlite4j.jdbc4
 
 import io.roastedroot.sqlite4j.SQLiteConnection
 import io.roastedroot.sqlite4j.jdbc3.JDBC3PreparedStatement
+import java.io.IOException
 import java.io.InputStream
 import java.io.Reader
 import java.sql.*
@@ -24,14 +25,13 @@ class JDBC4PreparedStatement(conn: SQLiteConnection, sql: String) : JDBC3Prepare
 
     @Throws(SQLException::class)
     override fun setNString(parameterIndex: Int, value: String?) {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        // SQLite has no national-character distinction; NString == String.
+        setString(parameterIndex, value)
     }
 
     @Throws(SQLException::class)
     override fun setNCharacterStream(parameterIndex: Int, value: Reader?, length: Long) {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        setCharacterStream(parameterIndex, value, length)
     }
 
     @Throws(SQLException::class)
@@ -42,20 +42,17 @@ class JDBC4PreparedStatement(conn: SQLiteConnection, sql: String) : JDBC3Prepare
 
     @Throws(SQLException::class)
     override fun setClob(parameterIndex: Int, reader: Reader?, length: Long) {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        setCharacterStream(parameterIndex, reader, length)
     }
 
     @Throws(SQLException::class)
     override fun setBlob(parameterIndex: Int, inputStream: InputStream?, length: Long) {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        setBinaryStream(parameterIndex, inputStream, length)
     }
 
     @Throws(SQLException::class)
     override fun setNClob(parameterIndex: Int, reader: Reader?, length: Long) {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        setCharacterStream(parameterIndex, reader, length)
     }
 
     @Throws(SQLException::class)
@@ -66,61 +63,79 @@ class JDBC4PreparedStatement(conn: SQLiteConnection, sql: String) : JDBC3Prepare
 
     @Throws(SQLException::class)
     override fun setAsciiStream(parameterIndex: Int, x: InputStream?, length: Long) {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        setAsciiStream(parameterIndex, x, length.toInt())
     }
 
     @Throws(SQLException::class)
     override fun setBinaryStream(parameterIndex: Int, x: InputStream?, length: Long) {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        setBinaryStream(parameterIndex, x, length.toInt())
     }
 
     @Throws(SQLException::class)
     override fun setCharacterStream(parameterIndex: Int, reader: Reader?, length: Long) {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        if (reader == null) {
+            setString(parameterIndex, null)
+        } else {
+            setCharacterStream(parameterIndex, reader, length.toInt())
+        }
     }
 
     @Throws(SQLException::class)
     override fun setAsciiStream(parameterIndex: Int, x: InputStream?) {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        if (x == null) {
+            setString(parameterIndex, null)
+            return
+        }
+        try {
+            setString(parameterIndex, String(x.readBytes(), Charsets.US_ASCII))
+        } catch (e: IOException) {
+            throw SQLException(e)
+        }
     }
 
     @Throws(SQLException::class)
     override fun setBinaryStream(parameterIndex: Int, x: InputStream?) {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        if (x == null) {
+            setBytes(parameterIndex, null)
+            return
+        }
+        try {
+            setBytes(parameterIndex, x.readBytes())
+        } catch (e: IOException) {
+            throw SQLException(e)
+        }
     }
 
     @Throws(SQLException::class)
     override fun setCharacterStream(parameterIndex: Int, reader: Reader?) {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        if (reader == null) {
+            setString(parameterIndex, null)
+            return
+        }
+        try {
+            setString(parameterIndex, reader.readText())
+        } catch (e: IOException) {
+            throw SQLException(e)
+        }
     }
 
     @Throws(SQLException::class)
     override fun setNCharacterStream(parameterIndex: Int, value: Reader?) {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        setCharacterStream(parameterIndex, value)
     }
 
     @Throws(SQLException::class)
     override fun setClob(parameterIndex: Int, reader: Reader?) {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        setCharacterStream(parameterIndex, reader)
     }
 
     @Throws(SQLException::class)
     override fun setBlob(parameterIndex: Int, inputStream: InputStream?) {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        setBinaryStream(parameterIndex, inputStream)
     }
 
     @Throws(SQLException::class)
     override fun setNClob(parameterIndex: Int, reader: Reader?) {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        setCharacterStream(parameterIndex, reader)
     }
 }

@@ -5,7 +5,9 @@ import io.roastedroot.sqlite4j.core.CoreStatement
 import io.roastedroot.sqlite4j.jdbc3.JDBC3ResultSet
 import java.io.*
 import java.math.BigDecimal
+import java.net.MalformedURLException
 import java.net.URL
+import javax.sql.rowset.serial.SerialBlob
 import java.sql.*
 import java.sql.Array
 import java.time.LocalDate
@@ -64,8 +66,7 @@ class JDBC4ResultSet(stmt: CoreStatement) : JDBC3ResultSet(stmt), ResultSet, Res
 
     @Throws(SQLException::class)
     override fun getHoldability(): Int {
-        // TODO Auto-generated method stub
-        return 0
+        return ResultSet.CLOSE_CURSORS_AT_COMMIT
     }
 
     @Throws(SQLException::class)
@@ -135,14 +136,13 @@ class JDBC4ResultSet(stmt: CoreStatement) : JDBC3ResultSet(stmt), ResultSet, Res
 
     @Throws(SQLException::class)
     override fun getNString(columnIndex: Int): String? {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        // SQLite has no national-character distinction; NString == String.
+        return getString(columnIndex)
     }
 
     @Throws(SQLException::class)
     override fun getNString(columnLabel: String): String? {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        return getString(columnLabel)
     }
 
     @Throws(SQLException::class)
@@ -461,23 +461,25 @@ class JDBC4ResultSet(stmt: CoreStatement) : JDBC3ResultSet(stmt), ResultSet, Res
     @Deprecated("")
     @Throws(SQLException::class)
     override fun getBigDecimal(col: Int, s: Int): BigDecimal? {
-        throw unsupported()
+        // Deprecated scale parameter is ignored, as in most JDBC drivers.
+        return getBigDecimal(col)
     }
 
     @Deprecated("")
     @Throws(SQLException::class)
     override fun getBigDecimal(col: String, s: Int): BigDecimal? {
-        throw unsupported()
+        return getBigDecimal(col)
     }
 
     @Throws(SQLException::class)
     override fun getBlob(col: Int): Blob? {
-        throw unsupported()
+        val bytes = getBytes(col) ?: return null
+        return SerialBlob(bytes)
     }
 
     @Throws(SQLException::class)
     override fun getBlob(col: String): Blob? {
-        throw unsupported()
+        return getBlob(findColumn(col))
     }
 
     @Throws(SQLException::class)
@@ -494,13 +496,13 @@ class JDBC4ResultSet(stmt: CoreStatement) : JDBC3ResultSet(stmt), ResultSet, Res
 
     @Throws(SQLException::class)
     override fun getObject(col: Int, map: Map<String, Class<*>>): Any? {
-        throw unsupported()
+        // SQLite has no user-defined types; the type map is ignored.
+        return getObject(col)
     }
 
     @Throws(SQLException::class)
     override fun getObject(col: String, map: Map<String, Class<*>>): Any? {
-
-        throw unsupported()
+        return getObject(col)
     }
 
     @Throws(SQLException::class)
@@ -525,12 +527,17 @@ class JDBC4ResultSet(stmt: CoreStatement) : JDBC3ResultSet(stmt), ResultSet, Res
 
     @Throws(SQLException::class)
     override fun getURL(col: Int): URL? {
-        throw unsupported()
+        val s = getString(col) ?: return null
+        try {
+            return URL(s)
+        } catch (e: MalformedURLException) {
+            throw SQLException("Invalid URL: " + s, e)
+        }
     }
 
     @Throws(SQLException::class)
     override fun getURL(col: String): URL? {
-        throw unsupported()
+        return getURL(findColumn(col))
     }
 
     @Throws(SQLException::class)

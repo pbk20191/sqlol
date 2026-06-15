@@ -67,14 +67,8 @@ class JDBC4Connection(url: String, fileName: String, prop: Properties) : JDBC3Co
 
     @Throws(SQLException::class)
     override fun isValid(timeout: Int): Boolean {
-        if (isClosed()) {
-            return false
-        }
-        val statement = createStatement()
-        try {
-            return statement.execute("select 1")
-        } finally {
-            statement.close()
+        return !isClosed && createStatement().use {
+            it.execute("select 1")
         }
     }
 
@@ -96,8 +90,8 @@ class JDBC4Connection(url: String, fileName: String, prop: Properties) : JDBC3Co
 
     @Throws(SQLException::class)
     override fun getClientInfo(): Properties? {
-        // TODO Auto-generated method stub
-        return null
+        // SQLite stores no client info; return an empty set per the JDBC contract.
+        return Properties()
     }
 
     @Throws(SQLException::class)
