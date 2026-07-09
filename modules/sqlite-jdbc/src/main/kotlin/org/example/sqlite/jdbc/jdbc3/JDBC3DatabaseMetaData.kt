@@ -19,7 +19,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
      * @see DatabaseMetaData.getConnection
      */
     override fun getConnection(): Connection {
-        return conn!!
+        return db
     }
 
     /**
@@ -27,7 +27,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
      */
     @Throws(SQLException::class)
     override fun getDatabaseMajorVersion(): Int {
-        return conn!!.libversion().split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0].toInt()
+        return db.libversion().split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0].toInt()
     }
 
     /**
@@ -35,7 +35,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
      */
     @Throws(SQLException::class)
     override fun getDatabaseMinorVersion(): Int {
-        return conn!!.libversion().split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[1].toInt()
+        return db.libversion().split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[1].toInt()
     }
 
     /**
@@ -239,7 +239,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
      */
     @Throws(SQLException::class)
     override fun getDatabaseProductVersion(): String {
-        return conn!!.libversion()
+        return db.libversion()
     }
 
     /**
@@ -350,7 +350,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
      * @see DatabaseMetaData.getURL
      */
     override fun getURL(): String {
-        return conn!!.url
+        return db.url
     }
 
     /**
@@ -708,7 +708,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
      */
     @Throws(SQLException::class)
     override fun supportsFullOuterJoins(): Boolean {
-        val version = conn!!.libversion().split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        val version = db.libversion().split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
         return version[0].toInt() >= 3 && version[1].toInt() >= 39
     }
 
@@ -1032,7 +1032,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
      */
     @Throws(SQLException::class)
     override fun isReadOnly(): Boolean {
-        return conn!!.isReadOnly()
+        return db.isReadOnly()
     }
 
     /**
@@ -1042,7 +1042,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
     override fun getAttributes(c: String?, s: String?, t: String?, a: String?): ResultSet {
         if (getAttributes == null) {
             getAttributes =
-                conn!!.prepareStatement(
+                db.prepareStatement(
                     ("select null as TYPE_CAT, null as TYPE_SCHEM, null as TYPE_NAME, null"
                             + " as ATTR_NAME, null as DATA_TYPE, null as ATTR_TYPE_NAME, null"
                             + " as ATTR_SIZE, null as DECIMAL_DIGITS, null as NUM_PREC_RADIX,"
@@ -1064,7 +1064,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
     override fun getBestRowIdentifier(c: String?, s: String?, t: String?, scope: Int, n: Boolean): ResultSet {
         if (getBestRowIdentifier == null) {
             getBestRowIdentifier =
-                conn!!.prepareStatement(
+                db.prepareStatement(
                     ("select null as SCOPE, null as COLUMN_NAME, null as DATA_TYPE, null as"
                             + " TYPE_NAME, null as COLUMN_SIZE, null as BUFFER_LENGTH, null as"
                             + " DECIMAL_DIGITS, null as PSEUDO_COLUMN limit 0;")
@@ -1081,7 +1081,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
     override fun getColumnPrivileges(c: String?, s: String?, t: String?, colPat: String?): ResultSet {
         if (getColumnPrivileges == null) {
             getColumnPrivileges =
-                conn!!.prepareStatement(
+                db.prepareStatement(
                     ("select null as TABLE_CAT, null as TABLE_SCHEM, null as TABLE_NAME,"
                             + " null as COLUMN_NAME, null as GRANTOR, null as GRANTEE, null as"
                             + " PRIVILEGE, null as IS_GRANTABLE limit 0;")
@@ -1203,10 +1203,10 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
 
                 var isAutoIncrement: Boolean
 
-                var statColAutoinc = conn!!.createStatement()
+                var statColAutoinc = db.createStatement()
                 var rsColAutoinc: ResultSet? = null
                 try {
-                    statColAutoinc = conn!!.createStatement()
+                    statColAutoinc = db.createStatement()
                     rsColAutoinc =
                         statColAutoinc.executeQuery(
                             ("SELECT LIKE('%autoincrement%', LOWER(sql)) FROM sqlite_schema "
@@ -1235,7 +1235,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
 
                 // For each table, get the column info and build into overall SQL
                 val pragmaStatement = "PRAGMA table_xinfo('" + escape(tableName) + "')"
-                conn!!.createStatement().use { colstat ->
+                db.createStatement().use { colstat ->
                     colstat.executeQuery(pragmaStatement).use { rscol ->
                         var i = 0
                         while (rscol.next()) {
@@ -1401,7 +1401,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
             )
         }
 
-        val stat = conn!!.createStatement()
+        val stat = db.createStatement()
         return (stat as CoreStatement).executeQuery(sql.toString(), true)!!
     }
 
@@ -1439,7 +1439,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
                     + DatabaseMetaData.importedKeyInitiallyDeferred
                     + " as DEFERRABILITY limit 0 ")
 
-        return (conn!!.createStatement() as CoreStatement).executeQuery(query, true)!!
+        return (db.createStatement() as CoreStatement).executeQuery(query, true)!!
     }
 
     /**
@@ -1449,7 +1449,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
     override fun getSchemas(): ResultSet {
         if (getSchemas == null) {
             getSchemas =
-                conn!!.prepareStatement(
+                db.prepareStatement(
                     "select null as TABLE_SCHEM, null as TABLE_CATALOG limit 0;"
                 )
         }
@@ -1463,7 +1463,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
     @Throws(SQLException::class)
     override fun getCatalogs(): ResultSet {
         if (getCatalogs == null) {
-            getCatalogs = conn!!.prepareStatement("select null as TABLE_CAT limit 0;")
+            getCatalogs = db.prepareStatement("select null as TABLE_CAT limit 0;")
         }
 
         return getCatalogs!!.executeQuery()
@@ -1477,7 +1477,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
         val pkFinder = PrimaryKeyFinder(table)
         val columns = pkFinder.columns
 
-        val stat = conn!!.createStatement()
+        val stat = db.createStatement()
         val sql = StringBuilder(512)
         sql.append("select null as TABLE_CAT, null as TABLE_SCHEM, '")
             .append(escape(table!!))
@@ -1517,7 +1517,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
         var schema = schema
         val pkFinder = PrimaryKeyFinder(table)
         val pkColumns = pkFinder.columns
-        val stat = conn!!.createStatement()
+        val stat = db.createStatement()
 
         catalog = if (catalog != null) quote(catalog) else null
         schema = if (schema != null) quote(schema) else null
@@ -1665,7 +1665,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
     @Throws(SQLException::class)
     override fun getImportedKeys(catalog: String?, schema: String?, table: String?): ResultSet {
         val rs: ResultSet
-        val stat = conn!!.createStatement()
+        val stat = db.createStatement()
         var sql = StringBuilder(700)
 
         sql.append("select ")
@@ -1788,7 +1788,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
     @Throws(SQLException::class)
     override fun getIndexInfo(c: String?, s: String?, table: String?, u: Boolean, approximate: Boolean): ResultSet {
         var rs: ResultSet
-        val stat = conn!!.createStatement()
+        val stat = db.createStatement()
         val sql = StringBuilder(500)
 
         // define the column header
@@ -1871,7 +1871,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
     override fun getProcedureColumns(c: String?, s: String?, p: String?, colPat: String?): ResultSet {
         if (getProcedureColumns == null) {
             getProcedureColumns =
-                conn!!.prepareStatement(
+                db.prepareStatement(
                     ("select null as PROCEDURE_CAT, null as PROCEDURE_SCHEM, null as"
                             + " PROCEDURE_NAME, null as COLUMN_NAME, null as COLUMN_TYPE, null"
                             + " as DATA_TYPE, null as TYPE_NAME, null as PRECISION, null as"
@@ -1889,7 +1889,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
     override fun getProcedures(c: String?, s: String?, p: String?): ResultSet {
         if (getProcedures == null) {
             getProcedures =
-                conn!!.prepareStatement(
+                db.prepareStatement(
                     ("select null as PROCEDURE_CAT, null as PROCEDURE_SCHEM, null as"
                             + " PROCEDURE_NAME, null as UNDEF1, null as UNDEF2, null as UNDEF3,"
                             + " null as REMARKS, null as PROCEDURE_TYPE limit 0;")
@@ -1905,7 +1905,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
     override fun getSuperTables(c: String?, s: String?, t: String?): ResultSet {
         if (getSuperTables == null) {
             getSuperTables =
-                conn!!.prepareStatement(
+                db.prepareStatement(
                     "select null as TABLE_CAT, null as TABLE_SCHEM, "
                             + "null as TABLE_NAME, null as SUPERTABLE_NAME limit 0;"
                 )
@@ -1920,7 +1920,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
     override fun getSuperTypes(c: String?, s: String?, t: String?): ResultSet {
         if (getSuperTypes == null) {
             getSuperTypes =
-                conn!!.prepareStatement(
+                db.prepareStatement(
                     ("select null as TYPE_CAT, null as TYPE_SCHEM, null as TYPE_NAME, null"
                             + " as SUPERTYPE_CAT, null as SUPERTYPE_SCHEM, null as"
                             + " SUPERTYPE_NAME limit 0;")
@@ -1936,7 +1936,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
     override fun getTablePrivileges(c: String?, s: String?, t: String?): ResultSet {
         if (getTablePrivileges == null) {
             getTablePrivileges =
-                conn!!.prepareStatement(
+                db.prepareStatement(
                     ("select  null as TABLE_CAT, null as TABLE_SCHEM, null as TABLE_NAME,"
                             + " null as GRANTOR, null GRANTEE,  null as PRIVILEGE, null as"
                             + " IS_GRANTABLE limit 0;")
@@ -2020,7 +2020,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
 
         sql.append(" ORDER BY TABLE_TYPE, TABLE_NAME;")
 
-        return (conn!!.createStatement() as CoreStatement).executeQuery(sql.toString(), true)!!
+        return (db.createStatement() as CoreStatement).executeQuery(sql.toString(), true)!!
     }
 
     /**
@@ -2040,7 +2040,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
                     + "SELECT 'GLOBAL TEMPORARY' AS TABLE_TYPE;")
 
         if (getTableTypes == null) {
-            getTableTypes = conn!!.prepareStatement(sql)
+            getTableTypes = db.prepareStatement(sql)
         }
         getTableTypes!!.clearParameters()
         return getTableTypes!!.executeQuery()
@@ -2178,7 +2178,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
                     )
                 )
                         + " order by DATA_TYPE")
-            getTypeInfo = conn!!.prepareStatement(sql)
+            getTypeInfo = db.prepareStatement(sql)
         }
 
         getTypeInfo!!.clearParameters()
@@ -2192,7 +2192,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
     override fun getUDTs(c: String?, s: String?, t: String?, types: IntArray?): ResultSet {
         if (getUDTs == null) {
             getUDTs =
-                conn!!.prepareStatement(
+                db.prepareStatement(
                     ("select  null as TYPE_CAT, null as TYPE_SCHEM, null as TYPE_NAME,  null"
                             + " as CLASS_NAME,  null as DATA_TYPE, null as REMARKS, null as"
                             + " BASE_TYPE limit 0;")
@@ -2210,7 +2210,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
     override fun getVersionColumns(c: String?, s: String?, t: String?): ResultSet {
         if (getVersionColumns == null) {
             getVersionColumns =
-                conn!!.prepareStatement(
+                db.prepareStatement(
                     ("select null as SCOPE, null as COLUMN_NAME, null as DATA_TYPE, null as"
                             + " TYPE_NAME, null as COLUMN_SIZE, null as BUFFER_LENGTH, null as"
                             + " DECIMAL_DIGITS, null as PSEUDO_COLUMN limit 0;")
@@ -2279,7 +2279,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
                 throw SQLException("Invalid table name: '" + this.table + "'")
             }
 
-            conn!!.createStatement().use { stat ->
+            db.createStatement().use { stat ->
                 stat.executeQuery(
                     ("select sql from sqlite_schema where"
                             + " lower(name) = lower('"
@@ -2337,7 +2337,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
 
             val fkNames = getForeignKeyNames(this.fkTableName)
 
-            conn!!.createStatement().use { stat ->
+            db.createStatement().use { stat ->
                 stat.executeQuery(
                     ("pragma foreign_key_list('"
                             + escape(this.fkTableName.lowercase(Locale.getDefault()))
@@ -2386,7 +2386,7 @@ abstract class JDBC3DatabaseMetaData protected constructor(conn: SQLiteConnectio
             if (tbl == null) {
                 return fkNames
             }
-            conn!!.createStatement().use { stat2 ->
+            db.createStatement().use { stat2 ->
                 stat2.executeQuery(
                     ("select sql from sqlite_schema where"
                             + " lower(name) = lower('"

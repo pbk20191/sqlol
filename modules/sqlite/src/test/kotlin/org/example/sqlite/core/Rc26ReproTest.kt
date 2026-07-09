@@ -6,7 +6,7 @@ import java.nio.file.Files
 
 /**
  * rc=26(NOTADB) 회귀 감시 — 함정 3(벌크 position 레이스)의 역사적 발화점이었던 IO-헤비 워크로드를
- * 반복 실행한다. 근원은 [StatelessBulkMemory] 로 해소됨 (BUILD.md §9.1) — 이 테스트는 그 사실이
+ * 반복 실행한다. 근원은 stateless 벌크 Memory(현재 ByteArrayMemory)로 해소됨 (BUILD.md §9.1) — 이 테스트는 그 사실이
  * 계속 참인지 지키는 보초. 실패 시 즉시 throw (스택 보존) — 그때는 §9.1 의 이분법
  * (wal_autocheckpoint=0 / 행수 sweep)으로 추적할 것.
  */

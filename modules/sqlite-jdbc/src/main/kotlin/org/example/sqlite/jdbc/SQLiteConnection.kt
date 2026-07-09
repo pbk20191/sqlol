@@ -6,19 +6,11 @@ import org.example.sqlite.jdbc.core.DB
 import org.example.sqlite.jdbc.core.WorkerDB
 import org.example.sqlite.jdbc.core.WorkerDBFactory
 import org.example.sqlite.jdbc.jdbc4.JDBC4DatabaseMetaData
-import java.io.File
-import java.io.IOException
-import java.net.MalformedURLException
-import java.net.URISyntaxException
-import java.net.URL
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.sql.Connection
 import java.sql.DatabaseMetaData
 import java.sql.ResultSet
 import java.sql.SQLException
 import java.util.Properties
-import java.util.UUID
 import java.util.concurrent.Executor
 
 abstract class SQLiteConnection : Connection {
@@ -31,42 +23,9 @@ abstract class SQLiteConnection : Connection {
     var currentTransactionMode: TransactionMode? = null
     var isFirstStatementExecuted: Boolean = false
 
-    /**
-     * Connection constructor for reusing an existing DB handle
-     *
-     * @param db
-     */
     constructor(db: DB) {
         this.dbHandle = db
         connectionConfig = db.config.newConnectionConfig()
-    }
-
-    /**
-     * Constructor to create a connection to a database at the given location.
-     */
-    constructor(url: String, fileName: String) : this(url, fileName, Properties())
-
-    /**
-     * Constructor to create a pre-configured connection to a database at the given location.
-     */
-    constructor(url: String, fileName: String, prop: Properties) {
-        val newDB = open(url, fileName, prop)
-        this.dbHandle = newDB
-        try {
-            val config = this.database.config
-            this.connectionConfig = this.database.config.newConnectionConfig()
-            config.apply(this)
-            this.currentTransactionMode = this.database.config.transactionMode
-            // connection starts in "clean" state (even though some PRAGMA statements were executed)
-            this.isFirstStatementExecuted = false
-        } catch (t: Throwable) {
-            try {
-                newDB.close()
-            } catch (e: Exception) {
-                t.addSuppressed(e)
-            }
-            throw t
-        }
     }
 
     @Throws(SQLException::class)
@@ -218,8 +177,9 @@ abstract class SQLiteConnection : Connection {
     }
 
     @Throws(SQLException::class)
-    fun getLimit(limit: SQLiteLimits) {
-        database.limit(limit.id, -1)
+    fun getLimit(limit: SQLiteLimits): Int {
+        // sqlite3_limit 에 음수를 주면 변경 없이 현재 값을 반환한다
+        return database.limit(limit.id, -1)
     }
 
     @Throws(SQLException::class)
@@ -235,7 +195,7 @@ abstract class SQLiteConnection : Connection {
         if (isClosed()) return
         if (meta != null) meta!!.close()
 
-        cache.close(database as WorkerDB)
+        WorkerDBFactory.close(database as WorkerDB)
     }
 
     /**
@@ -252,7 +212,7 @@ abstract class SQLiteConnection : Connection {
     @Throws(SQLException::class)
     fun libversion(): String {
         checkOpen()
-        return database.libversion()!!
+        return database.libversion()
     }
 
     /**
@@ -330,178 +290,4 @@ abstract class SQLiteConnection : Connection {
         database.deserialize(schema, buff)
     }
 
-    companion object {
-        private const val RESOURCE_NAME_PREFIX = ":resource:"
-
-        private val cache = WorkerDBFactory()
-
-        /**
-         * Opens a connection to the database using an SQLite library.
-         */
-        @Throws(SQLException::class)
-        private fun open(url: String, origFileName: String, props: Properties): DB {
-            // Create a copy of the given properties
-            val newProps = Properties()
-            newProps.putAll(props)
-
-            // Extract pragma as properties
-            var fileName = extractPragmasFromFilename(url, origFileName, newProps)
-            val config = SQLiteConfig(newProps)
-
-            // check the path to the file exists
-            if (!fileName.isEmpty() &&
-                ":memory:" != fileName &&
-                !fileName.startsWith("file:") &&
-                !fileName.contains("mode=memory")
-            ) {
-                if (fileName.startsWith(RESOURCE_NAME_PREFIX)) {
-                    val resourceName = fileName.substring(RESOURCE_NAME_PREFIX.length)
-
-                    // search the class path
-                    val contextCL = Thread.currentThread().contextClassLoader
-                    var resourceAddr = contextCL.getResource(resourceName)
-                    if (resourceAddr == null) {
-                        try {
-                            resourceAddr = URL(resourceName)
-                        } catch (e: MalformedURLException) {
-                            throw SQLException(
-                                String.format("resource %s not found: %s", resourceName, e)
-                            )
-                        }
-                    }
-
-                    try {
-                        fileName = extractResource(resourceAddr).absolutePath
-                    } catch (e: IOException) {
-                        throw SQLException(
-                            String.format("failed to load %s: %s", resourceName, e)
-                        )
-                    }
-                } else {
-                    fileName = File(fileName).absoluteFile.absolutePath
-                }
-            }
-
-            val isMemory =
-                fileName.isEmpty() ||
-                    ":memory:" == fileName ||
-                    fileName.contains("mode=memory")
-
-            // load the native DB
-            val db: DB
-            try {
-                db = cache.create(url, fileName, config, isMemory)
-            } catch (e: Exception) {
-                val err = SQLException("Error opening connection")
-                err.initCause(e)
-                throw err
-            }
-            db.open(fileName, config.openModeFlags)
-            return db
-        }
-
-        /**
-         * Returns a file name from the given resource address.
-         */
-        @Throws(IOException::class)
-        private fun extractResource(resourceAddr: URL): File {
-            if (resourceAddr.protocol == "file") {
-                try {
-                    return File(resourceAddr.toURI())
-                } catch (e: URISyntaxException) {
-                    throw IOException(e.message)
-                }
-            }
-
-            val tempFolder = File(System.getProperty("java.io.tmpdir")).absolutePath
-            val dbFileName = String.format("sqlite-jdbc-tmp-%s.db", UUID.randomUUID())
-            val dbFile = File(tempFolder, dbFileName)
-
-            if (dbFile.exists()) {
-                val resourceLastModified = resourceAddr.openConnection().lastModified
-                val tmpFileLastModified = dbFile.lastModified()
-                if (resourceLastModified < tmpFileLastModified) {
-                    return dbFile
-                } else {
-                    // remove the old DB file
-                    val deletionSucceeded = dbFile.delete()
-                    if (!deletionSucceeded) {
-                        throw IOException(
-                            "failed to remove existing DB file: " + dbFile.absolutePath
-                        )
-                    }
-                }
-            }
-
-            val conn = resourceAddr.openConnection()
-            // Disable caches to avoid keeping unnecessary file references after the single-use copy
-            conn.useCaches = false
-            conn.getInputStream().use { reader ->
-                Files.copy(reader, dbFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
-                return dbFile
-            }
-        }
-
-        /**
-         * Extracts PRAGMA values from the filename and sets them into the Properties object which
-         * will be used to build the SQLConfig. The sanitized filename is returned.
-         */
-        @Throws(SQLException::class)
-        @JvmStatic
-        protected fun extractPragmasFromFilename(
-            url: String,
-            filename: String,
-            prop: Properties
-        ): String {
-            val parameterDelimiter = filename.indexOf('?')
-            if (parameterDelimiter == -1) {
-                // nothing to extract
-                return filename
-            }
-
-            val sb = StringBuilder()
-            sb.append(filename.substring(0, parameterDelimiter))
-
-            var nonPragmaCount = 0
-            val parameters = filename.substring(parameterDelimiter + 1).split("&".toRegex())
-                .dropLastWhile { it.isEmpty() }.toTypedArray()
-            for (i in parameters.indices) {
-                // process parameters in reverse-order, last specified pragma value wins
-                val parameter = parameters[parameters.size - 1 - i].trim()
-
-                if (parameter.isEmpty()) {
-                    // duplicated &&& sequence, drop
-                    continue
-                }
-
-                val kvp = parameter.split("=".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                val key = kvp[0].trim().lowercase()
-                if (SQLiteConfig.pragmaSet.contains(key)) {
-                    if (kvp.size == 1) {
-                        throw SQLException(
-                            String.format(
-                                "Please specify a value for PRAGMA %s in URL %s", key, url
-                            )
-                        )
-                    }
-                    val value = kvp[1].trim()
-                    if (!value.isEmpty()) {
-                        if (prop.containsKey(key)) {
-                            // IGNORE: this allows DriverManager.getConnection(String, Properties)
-                            // to override URL parameters programmatically.
-                        } else {
-                            prop.setProperty(key, value)
-                        }
-                    }
-                } else {
-                    // not a Pragma, retain as part of filename
-                    sb.append(if (nonPragmaCount == 0) '?' else '&')
-                    sb.append(parameter)
-                    nonPragmaCount++
-                }
-            }
-
-            return sb.toString()
-        }
-    }
 }

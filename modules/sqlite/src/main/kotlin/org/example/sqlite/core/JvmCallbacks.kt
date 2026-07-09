@@ -1,6 +1,6 @@
 package org.example.sqlite.core
 
-import com.dylibso.chicory.runtime.Memory
+import run.endive.runtime.Memory
 import com.example.wasm.JvmVfsModule_ModuleExports
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger

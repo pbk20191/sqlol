@@ -184,14 +184,14 @@ abstract class Function {
 
     @Throws(SQLException::class)
     private fun checkContext() {
-        if (conn == null || conn!!.database == null || contextPtr == 0L) {
+        if (conn?.database == null || contextPtr == 0L) {
             throw SQLException("no context, not allowed to read value")
         }
     }
 
     @Throws(SQLException::class)
     private fun checkValue(arg: Int) {
-        if (conn == null || conn!!.database == null || valuePtr == 0L) {
+        if (conn?.database == null || valuePtr == 0L) {
             throw SQLException("not in value access state")
         }
         if (arg >= argCount) {

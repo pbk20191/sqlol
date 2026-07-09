@@ -1,5 +1,8 @@
 package org.example.sqlite
 
+import org.example.sqlite.core.InternalRuntimeApi
+import org.example.sqlite.core.JvmVfsRuntime
+import org.example.sqlite.core.SqliteDataSource
 import org.example.sqlite.core.SqliteWorker
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -15,9 +18,10 @@ import java.nio.file.Files
  */
 class SqliteWorkerClosureTest {
 
+    @OptIn(InternalRuntimeApi::class)
     private fun <T> withWorker(block: (JvmVfsRuntime, SqliteWorker) -> T): T {
         val dir = Files.createTempDirectory("sqlitewk")
-        val h = SqliteDataSource.openRuntime(dir, "closure.db")
+        val h = SqliteDataSource.openRuntime(dir, "closure.db") as SqliteDataSource.RuntimeHandle
         try {
             val w = SqliteWorker.spawn(h.rt, h.guestPath)
             try {
@@ -31,7 +35,7 @@ class SqliteWorkerClosureTest {
                 h.rt.close()
             }
         } finally {
-            h.ownerLock.close()
+            h.ownerLock!!.close()
         }
     }
 

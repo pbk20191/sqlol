@@ -160,14 +160,20 @@ clang --target=wasm32-wasi -O2 -mexec-model=reactor -o sqlite3.wasm sqlite3-full
 - `THREADSAFE=0` — 내부 mutex 비활성. **인스턴스-per-커넥션 모델에선 오히려 정답** (동시성은 JVM 레이어에서).
 - `OMIT_LOAD_EXTENSION` — 런타임 `.so` 동적 로딩 불가. 정적 컴파일 확장은 전부 포함됨.
 
-## 3. AOT 컴파일 (Chicory)
+## 3. AOT 컴파일 (endive)
 
-`chicory-aot/pom.xml` 의 `chicory-compiler-maven-plugin` 이 wasm → JVM 바이트코드 생성.
+**[2026-07 갱신]** Chicory → endive(Bytecode Alliance 이관) + Maven CLI 제거. `build.gradle.kts` 의
+커스텀 태스크 `generateWasmAot`(`GenerateEndiveModules`)가 `run.endive:build-time-compiler` 의
+`Config`/`Generator` 를 **인프로세스로 직접 호출** — 외부 `mvn` 서브프로세스도 `chicory-aot/pom.xml`
+도 더 이상 없다 (호출 순서는 endive Maven 플러그인의 Mojo 바이트코드 역어셈블로 확정: builder 체인 →
+`generateResources`(인터프리트 함수 집합 반환) → `generateMetaWasm` → `generateSources` →
+`generateModuleInterface`). wasm 바이너리는 여전히 `chicory-aot/` 디렉터리에 둔다(이름은 역사적 잔재,
+기능과 무관 — 이후 정리 후보).
 - `.java` 소스(인터페이스 + `Sqlite3Module`)와 `.class`(AOT 머신 `Sqlite3ModuleMachine`)를 분리 생성.
-- **머신 `.class`는 소스가 아니라 컴파일 classpath에 올려야 함** (build.gradle.kts의 `generatedClasses` 참조).
+- **머신 `.class`는 소스가 아니라 컴파일 classpath에 올려야 함** (build.gradle.kts의 `generatedClassDir` 참조).
 - **두 모듈을 AOT 생성**: `Sqlite3Module`(non-threads, 메인 라이브러리) + `JvmVfsModule`(threads+VFS, M3 WAL).
   → 각각 `*_ModuleExports` 컴파일타임 타입드 인터페이스 제공(문자열 export 조회 불필요, 타입 안전).
-  - Chicory AOT 가 **threads/atomics wasm 도 컴파일** 가능함을 확인(`JvmVfsModule`).
+  - endive AOT 가 **threads/atomics wasm 도 컴파일** 가능함을 확인(`JvmVfsModule`).
 
 ## 4. 라이브러리 API (`src/main/kotlin/org/example/sqlite/`)
 

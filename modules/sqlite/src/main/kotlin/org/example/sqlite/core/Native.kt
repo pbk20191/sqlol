@@ -1,11 +1,11 @@
 package org.example.sqlite.core
 
-import com.dylibso.chicory.runtime.HostFunction
-import com.dylibso.chicory.runtime.ImportValues
-import com.dylibso.chicory.runtime.Instance
-import com.dylibso.chicory.runtime.Memory
-import com.dylibso.chicory.wasi.WasiOptions
-import com.dylibso.chicory.wasi.WasiPreview1
+import run.endive.runtime.HostFunction
+import run.endive.runtime.ImportValues
+import run.endive.runtime.Instance
+import run.endive.runtime.Memory
+import run.endive.wasi.WasiOptions
+import run.endive.wasi.WasiPreview1
 import com.example.wasm.Sqlite3Module
 import com.example.wasm.Sqlite3Module_ModuleExports
 import java.util.concurrent.locks.ReentrantLock
@@ -25,9 +25,9 @@ class Native(wasiOptions: WasiOptions) : AutoCloseable {
     private val instance: Instance = Instance.builder(Sqlite3Module.load())
         .withMachineFactory(Sqlite3Module::create)
         .withImportValues(ImportValues.builder().addFunction(*wasi.toHostFunctions().map { old ->
-            HostFunction(old.module(), old.name(), old.functionType()) {a,b ->
+            HostFunction(old.module(), old.name(), old.functionType()) { a, b ->
                 lock.withLock {
-                    old.handle().apply(a,*b)
+                    old.handle().apply(a, *b)
                 }
             }
         }.toTypedArray()).build())
@@ -35,25 +35,17 @@ class Native(wasiOptions: WasiOptions) : AutoCloseable {
         .withInitialize(true)    // data/element 세그먼트 초기화
         .build()
 
-     val exports = Sqlite3Module_ModuleExports( instance)
+    val exports = Sqlite3Module_ModuleExports(instance)
 
     val mem: Memory
 
     init {
         exports._initialize() // reactor 런타임 초기화
-//        instance.export("_initialize").apply()
         mem = exports.memory()
     }
 
-    /** export 함수 호출. i32/i64 인자/반환은 raw long, f64 는 Double.toRawBits()/fromBits() 로 인코딩. */
-//    fun call(name: String, vararg args: Long): Long {
-//        val r = instance.export(name).apply(*args)   // void 함수는 null 반환
-//        return if (r == null || r.isEmpty()) 0L else r[0]
-//    }
-
     // ---- 메모리 할당 ----
     fun malloc(n: Int): Int {
-
         val p = exports.malloc(n)
         check(p != 0) { "wasm malloc($n) 실패 (OOM)" }
         return p
@@ -84,7 +76,7 @@ class Native(wasiOptions: WasiOptions) : AutoCloseable {
     fun readString(ptr: Int, len: Int): String = if (ptr == 0 || len == 0) "" else mem.readString(ptr, len)
     fun readBytes(ptr: Int, len: Int): ByteArray = if (ptr == 0 || len == 0) ByteArray(0) else mem.readBytes(ptr, len)
 
-    fun errmsg(db: Int): String = readCString(exports.sqlite3Errmsg( db))
+    fun errmsg(db: Int): String = readCString(exports.sqlite3Errmsg(db))
 
     override fun close() = lock.withLock { wasi.close() }
 }

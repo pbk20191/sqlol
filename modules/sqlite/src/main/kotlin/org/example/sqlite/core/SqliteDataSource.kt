@@ -2,9 +2,7 @@ package org.example.sqlite.core
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
@@ -28,6 +26,7 @@ import kotlin.concurrent.withLock
  * writer 간 직렬화는 WAL 자체의 write 락([JvmVfsLocks] = 진짜 JVM 락) + busy 재시도가 담당한다.
  * [getConnection] 의 워커 spawn 은 내부 락으로 직렬화된다 (§9 규율 — 사용자에게 노출 안 됨).
  */
+@OptIn(InternalRuntimeApi::class)
 class SqliteDataSource(hostDir: Path, fileName: String) : AutoCloseable {
 
     internal val rt: JvmVfsRuntime
@@ -38,10 +37,13 @@ class SqliteDataSource(hostDir: Path, fileName: String) : AutoCloseable {
     @Volatile private var closed = false
 
     init {
-        val h = openRuntime(hostDir, fileName)
-        rt = h.rt
-        guestPath = h.guestPath
-        ownerLock = h.ownerLock
+        when (val h = openRuntime(hostDir, fileName)) {
+            is RuntimeHandle -> {
+                rt = h.rt
+                guestPath = h.guestPath
+                ownerLock = h.ownerLock!!
+            }
+        }
     }
 
     /** 커넥션 생성 — 워커를 그때그때 spawn (open+WAL+warmup 완료 후 반환). */
@@ -71,16 +73,51 @@ class SqliteDataSource(hostDir: Path, fileName: String) : AutoCloseable {
         }
     }
 
-    /** [openRuntime] 결과 — 런타임 + guest 경로 + 단독 소유 락. */
-    internal class RuntimeHandle(val rt: JvmVfsRuntime, val guestPath: String, val ownerLock: DbOwnerLock)
+    /**
+     * 불투명 런타임 핸들 — 내부 런타임/락 구조는 감추고, 포트 spawn 과 close 만 노출한다.
+     * core 밖에서 구현 불가(sealed)이고, 획득은 [openRuntime]/[openMemoryRuntime](opt-in)로만.
+     */
+    sealed interface IRuntimeHandle {
+        /** 이 런타임 위에 워커 포트 1개 spawn — 같은 핸들의 포트들은 런타임을 공유한다. */
+        fun spawnPort(readOnly: Boolean, release: Runnable): WorkerDbPort
+
+        /** 런타임 종료 + 단독 소유 락 반납 + (`:memory:`) 임시 디렉터리 정리. */
+        fun close()
+    }
+
+    internal class RuntimeHandle(
+        internal val rt: JvmVfsRuntime,
+        internal val guestPath: String,
+        private val hostTmp: Path,
+        internal val ownerLock: DbOwnerLock?,   // null = :memory:
+        private val deleteTmpOnClose: Boolean,
+    ) : IRuntimeHandle {
+        private val spawnLock = ReentrantLock()
+
+        override fun spawnPort(readOnly: Boolean, release: Runnable): WorkerDbPort =
+            WorkerDbPort.spawn(rt, guestPath, spawnLock, readOnly, hostTmp, release)
+
+        override fun close() {
+            try {
+                rt.close()
+            } finally {
+                ownerLock?.close()
+                if (deleteTmpOnClose) runCatching {
+                    Files.list(hostTmp).use { l -> l.forEach { Files.deleteIfExists(it) } }
+                    Files.deleteIfExists(hostTmp)
+                }
+            }
+        }
+    }
 
     companion object {
         /**
-         * 런타임 + 파일 준비 공통 경로 ([SqliteWal] 과 공유):
+         * 파일 런타임 + 준비 공통 경로 ([SqliteWal] 과 공유):
          * **단독 소유 락([DbOwnerLock]) 선획득** → "/db"(데이터) + "/tmp"(sorter PMA 스필·VACUUM·
          * 임시 테이블) preopen → 파일 선-생성 + WAL 영속화 (동시 생성/wal-index 초기화 경합 방지).
          */
-        internal fun openRuntime(hostDir: Path, fileName: String): RuntimeHandle {
+        @InternalRuntimeApi
+        fun openRuntime(hostDir: Path, fileName: String): IRuntimeHandle {
             val ownerLock = DbOwnerLock.acquire(hostDir, fileName)
             try {
                 val tmp = hostDir.resolve(".tmp").also { Files.createDirectories(it) }
@@ -89,9 +126,22 @@ class SqliteDataSource(hostDir: Path, fileName: String) : AutoCloseable {
                 val init = rt.openDb(guestPath)
                 rt.exec(init, "PRAGMA journal_mode=WAL")
                 rt.closeDb(init)
-                return RuntimeHandle(rt, guestPath, ownerLock)
+                return RuntimeHandle(rt, guestPath, tmp, ownerLock, deleteTmpOnClose = false)
             } catch (t: Throwable) {
                 ownerLock.close()
+                throw t
+            }
+        }
+
+        /** `:memory:` 런타임 — 워커별 사유 인메모리 DB. backup/restore 중계용 "/tmp" preopen. */
+        @InternalRuntimeApi
+        fun openMemoryRuntime(): IRuntimeHandle {
+            val tmp = Files.createTempDirectory("sqlite-jvm-mem")
+            try {
+                val rt = JvmVfsRuntime(mapOf("/tmp" to tmp))
+                return RuntimeHandle(rt, ":memory:", tmp, ownerLock = null, deleteTmpOnClose = true)
+            } catch (t: Throwable) {
+                runCatching { Files.deleteIfExists(tmp) }
                 throw t
             }
         }
@@ -119,7 +169,8 @@ class SqliteConnection internal constructor(
         ds.rt.interruptDb(worker.dbPtr)
     }
 
-    /** ?-바인딩 prepared statement 생성 — stmt 는 이 커넥션의 워커 소유 (LRU 캐시 밖, [SqlitePreparedStatement.close] 까지). */
+    /** ?-바인딩 prepared statement 생성 — stmt 는
+     *  이 커넥션의 워커 소유 (LRU 캐시 밖, [SqlitePreparedStatement.close] 까지). */
     fun prepare(sql: String): SqlitePreparedStatement {
         val (st, n) = submitTask("prepare:$sql") { s -> s.prepareUser(sql) }
         val ps = SqlitePreparedStatement(this, st, n, sql)

@@ -1,6 +1,7 @@
 package org.example.sqlite.core
 
-import com.dylibso.chicory.wasi.WasiOptions
+import run.endive.wasi.WasiOptions
+import org.example.sqlite.DbCoordinator
 import java.nio.file.Path
 import java.util.concurrent.locks.ReentrantReadWriteLock
 

@@ -6,11 +6,10 @@ import org.example.sqlite.core.JvmCallbacks
 import org.example.sqlite.core.JvmCallbacks.Udf
 import org.example.sqlite.core.SqliteNativeException
 import org.example.sqlite.core.WorkerDbPort
-import org.example.sqlite.core.WorkerDbPort.Companion.openFile
-import org.example.sqlite.core.WorkerDbPort.Companion.openMemory
 import org.example.sqlite.jdbc.BusyHandler
 import org.example.sqlite.jdbc.Collation
 import org.example.sqlite.jdbc.ProgressHandler
+import org.example.sqlite.jdbc.SQLiteArray
 import org.example.sqlite.jdbc.SQLiteConfig
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -92,9 +91,9 @@ class WorkerDB(url: String, fileName: String, config: SQLiteConfig, private val 
         port =
             call {
                 if (memory)
-                    openMemory(readOnly)
+                    WorkerDbRuntimes.openMemory(readOnly)
                 else
-                    openFile(Path.of(filename), readOnly)
+                    WorkerDbRuntimes.openFile(Path.of(filename), readOnly)
             }
     }
 
@@ -257,7 +256,10 @@ class WorkerDB(url: String, fileName: String, config: SQLiteConfig, private val 
 
     @Throws(SQLException::class)
     public override fun column_name(stmt: Long, col: Int): String {
-        return call<String?>(WorkerDB.Op { port().columnName(stmt.toInt(), col) })!!
+        // sqlite3_column_name 은 게스트 OOM 시 NULL 포인터를 반환할 수 있다(SQLite 문서) — !! 로
+        // KotlinNullPointerException 을 던지지 않고 선언된 SQLException 계약을 지킨다.
+        return call<String?>(WorkerDB.Op { port().columnName(stmt.toInt(), col) })
+            ?: throw SQLException("column_name: sqlite3_column_name returned NULL (col=$col)")
     }
 
     @Throws(SQLException::class)
@@ -321,6 +323,16 @@ class WorkerDB(url: String, fileName: String, config: SQLiteConfig, private val 
         return call { port().bind(stmt.toInt(), pos, v) }
     }
 
+    @Throws(SQLException::class)
+    override fun bind_array(stmt: Long, pos: Int, v: SQLiteArray): Int = call {
+        val p = port()
+        when (v.kind) {
+            SQLiteArray.Kind.INT64 -> p.bindCarrayInt64(stmt.toInt(), pos, v.toLongArray())
+            SQLiteArray.Kind.DOUBLE -> p.bindCarrayDouble(stmt.toInt(), pos, v.toDoubleArray())
+            SQLiteArray.Kind.TEXT -> p.bindCarrayText(stmt.toInt(), pos, v.toStringArray())
+        }
+    }
+
     /** UDF 콜백이 실행 중인 동안의 호출 컨텍스트 — 이 커넥션의 워커 스레드만 만진다 (UDF 는 step 스레드 전용).  */
     @Volatile
     private var activeEnv: CallbackEnv? = null
@@ -356,44 +368,59 @@ class WorkerDB(url: String, fileName: String, config: SQLiteConfig, private val 
             argv: Int,
             call: Runnable
         ) {
+            val prev = activeEnv
             activeEnv = env
             f.setContext(ctx.toLong())
             f.setValue(argv.toLong())
             f.setArgs(argc)
-            call.run()
+            try {
+                call.run()
+            } finally {
+                // UDF 가 던져도 stale env 를 남기지 않는다 — 콜백 밖 value_*/result_* 접근은
+                // env() 의 "실행 중 아님" SQLException 으로 떨어져야 한다 (쓰레기 deref 방지).
+                // 중첩 UDF(워커 락 재진입 — UDF 본문이 다른 UDF 를 평가하는 SQL 실행 가능)에선
+                // null 이 아니라 바깥 호출의 env 를 복원해야 바깥 콜백이 마저 동작한다.
+                activeEnv = prev
+            }
         }
 
         override fun xFunc(env: CallbackEnv, ctx: Int, argc: Int, argv: Int) {
             invoke(env, ctx, argc, argv) {
                 f.xFunc()
-
             }
         }
 
         override fun xStep(env: CallbackEnv, ctx: Int, argc: Int, argv: Int) {
             invoke(env, ctx, argc, argv, Runnable {
                 (f as Function.Aggregate).xStep()
-
             })
         }
 
         override fun xFinal(env: CallbackEnv, ctx: Int) {
+            val prev = activeEnv
             activeEnv = env
             f.setContext(ctx.toLong())
-            (f as Function.Aggregate).xFinal()
+            try {
+                (f as Function.Aggregate).xFinal()
+            } finally {
+                activeEnv = prev
+            }
         }
 
         override fun xValue(env: CallbackEnv, ctx: Int) {
+            val prev = activeEnv
             activeEnv = env
             f.setContext(ctx.toLong())
-            (f as Function.Window).xValue()
-
+            try {
+                (f as Function.Window).xValue()
+            } finally {
+                activeEnv = prev
+            }
         }
 
         override fun xInverse(env: CallbackEnv, ctx: Int, argc: Int, argv: Int) {
             invoke(env, ctx, argc, argv, Runnable {
                 (f as Function.Window).xInverse()
-
             })
         }
     }
@@ -672,70 +699,64 @@ class WorkerDB(url: String, fileName: String, config: SQLiteConfig, private val 
     }
 
     @Synchronized
+    @Throws(SQLException::class)
     override fun set_commit_listener(enabled: Boolean) {
-        try {
-            val p = port()
-            if (enabled) {
-                commitKey =
-                    p.callbacks
-                        .register(
-                            JvmCallbacks.Commit {
-                                onCommit(true)
-                                0
-                            })
-                rollbackKey =
-                    p.callbacks
-                        .register(JvmCallbacks.Rollback { onCommit(false) })
-                val ck = commitKey
-                val rk = rollbackKey
-                call {
-                    p.commitHooks(ck, rk)
-                }
-            } else {
-                val ck = commitKey
-                val rk = rollbackKey
-                commitKey = 0
-                rollbackKey = 0
-                call {
-                    p.commitHooks(0, 0)
-                }
-                if (ck != 0) p.callbacks.free(ck)
-                if (rk != 0) p.callbacks.free(rk)
+        val p = port()
+        if (enabled) {
+            commitKey =
+                p.callbacks
+                    .register(
+                        JvmCallbacks.Commit {
+                            onCommit(true)
+                            0
+                        })
+            rollbackKey =
+                p.callbacks
+                    .register(JvmCallbacks.Rollback { onCommit(false) })
+            val ck = commitKey
+            val rk = rollbackKey
+            call {
+                p.commitHooks(ck, rk)
             }
-        } catch (e: SQLException) {
-            sneakyThrow<RuntimeException>(e)
+        } else {
+            val ck = commitKey
+            val rk = rollbackKey
+            commitKey = 0
+            rollbackKey = 0
+            call {
+                p.commitHooks(0, 0)
+            }
+            if (ck != 0) p.callbacks.free(ck)
+            if (rk != 0) p.callbacks.free(rk)
         }
     }
 
     @Synchronized
+    @Throws(SQLException::class)
     override fun set_update_listener(enabled: Boolean) {
-        try {
-            val p = port()
-            if (enabled) {
-                updateKey =
-                    p.callbacks
-                        .register { op: Int, dbName: String?, table: String?, rowId: Long ->
-                            onUpdate(
-                                op,
-                                dbName!!,
-                                table!!,
-                                rowId
-                            )
-                        }
-                val key = updateKey
-                call {
-                    p.updateHook(key)
-                }
-            } else {
-                val key = updateKey
-                updateKey = 0
-                call {
-                    p.updateHook(0)
-                }
-                if (key != 0) p.callbacks.free(key)
+        val p = port()
+        if (enabled) {
+            updateKey =
+                p.callbacks
+                    .register { op: Int, dbName: String?, table: String?, rowId: Long ->
+                        onUpdate(
+                            op,
+                            dbName!!,
+                            table!!,
+                            rowId
+                        )
+                    }
+            val key = updateKey
+            call {
+                p.updateHook(key)
             }
-        } catch (e: SQLException) {
-            sneakyThrow<RuntimeException>(e)
+        } else {
+            val key = updateKey
+            updateKey = 0
+            call {
+                p.updateHook(0)
+            }
+            if (key != 0) p.callbacks.free(key)
         }
     }
 
@@ -788,11 +809,6 @@ class WorkerDB(url: String, fileName: String, config: SQLiteConfig, private val 
         // 재진입 export 호출이라 **큐를 타지 않는다** (자기 큐 제출 = 데드락).
         /** SQLITE_UTF8 — 등록 인코딩 (xerial flags 와 OR).  */
         private const val UTF8 = 1
-
-//        @Throws(E::class)
-        private fun <E : Throwable> sneakyThrow(e: Throwable) {
-            throw e
-        }
 
         // WasmDB 기본값 미러
         private const val DEFAULT_BACKUP_BUSY_SLEEP_TIME_MILLIS = 100

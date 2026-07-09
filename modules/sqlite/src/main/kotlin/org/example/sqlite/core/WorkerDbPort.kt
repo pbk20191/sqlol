@@ -29,16 +29,14 @@ class WorkerDbPort private constructor(
     @Volatile private var closed = false
 
     companion object {
-        /** 파일 DB 포트 — [path] 는 절대 경로. 같은 파일의 포트들은 런타임을 공유한다. */
-        @JvmStatic
-        @JvmOverloads
-        fun openFile(path: Path, readOnly: Boolean = false): WorkerDbPort =
-            WorkerDbRuntimes.openFile(path.toAbsolutePath().normalize(), readOnly)
+        /** PROTOCOL(15) 흡수 재시도 정책 — 총 ~1s (200 × 5ms). */
+        private const val PROTOCOL_MAX_RETRIES = 200
+        private const val PROTOCOL_RETRY_SLEEP_MS = 5L
 
-        /** `:memory:` 포트 — 워커별 사유 인메모리 DB (커넥션 간 비공유, xerial 시맨틱). */
-        @JvmStatic
-        @JvmOverloads
-        fun openMemory(readOnly: Boolean = false): WorkerDbPort = WorkerDbRuntimes.openMemory(readOnly)
+        /** sqlite3_carray_bind 의 mFlags (SQLITE_CARRAY_*). */
+        private const val CARRAY_INT64 = 1
+        private const val CARRAY_DOUBLE = 2
+        private const val CARRAY_TEXT = 3
 
         internal fun spawn(
             rt: JvmVfsRuntime,
@@ -54,8 +52,8 @@ class WorkerDbPort private constructor(
         }
     }
 
-    /** caller 스레드 직접 실행 (per-child 락 직렬화 — §9.2). [label] 은 진단용 잔재. */
-    private fun <T> submit(label: String, fn: (SqliteWorker.Session) -> T): T {
+    /** caller 스레드 직접 실행 (per-child 락 직렬화 — §9.2). */
+    private fun <T> submit(fn: (SqliteWorker.Session) -> T): T {
         check(!closed) { "port closed" }
         return worker.run(fn)
     }
@@ -66,99 +64,100 @@ class WorkerDbPort private constructor(
      * sqlite3_exec (다중 문장 가능). rc 반환 — 실패 시 **extended result code**
      * (예: 19 CONSTRAINT → 2067 CONSTRAINT_UNIQUE; xerial 의 정밀 에러 매핑이 기대하는 형태).
      */
-    fun exec(sql: String): Int = submit(sql) { s ->
+    fun exec(sql: String): Int = submit { s ->
         val rc = s.exec(sql)
         if (rc == 0) 0 else s.x.sqlite3ExtendedErrcode(s.db)
     }
 
     /** 마지막 오류 메시지 (sqlite3_errmsg). */
-    fun errmsg(): String = submit("errmsg") { s -> s.mem.readCString(s.x.sqlite3Errmsg(s.db)) }
+    fun errmsg(): String = submit { s -> s.mem.readCString(s.x.sqlite3Errmsg(s.db)) }
 
     /** 실행 중 문장 즉시 중단 — 워커 큐를 **거치지 않고** main 인스턴스 경유 (블록된 워커도 풀림). */
     fun interrupt() {
         rt.interruptDb(worker.dbPtr)
     }
 
-    fun busyTimeout(ms: Int): Int = submit("busy_timeout") { s -> s.x.sqlite3BusyTimeout(s.db, ms) }
+    fun busyTimeout(ms: Int): Int = submit { s -> s.x.sqlite3BusyTimeout(s.db, ms) }
 
-    fun changes(): Long = submit("changes") { s -> s.x.sqlite3Changes(s.db).toLong() }
+    fun changes(): Long = submit { s -> s.x.sqlite3Changes(s.db).toLong() }
 
-    fun totalChanges(): Long = submit("total_changes") { s -> s.x.sqlite3TotalChanges64(s.db) }
+    fun totalChanges(): Long = submit { s -> s.x.sqlite3TotalChanges64(s.db) }
 
-    fun libversion(): String = submit("libversion") { s -> s.mem.readCString(s.x.sqlite3Libversion()) }
+    fun libversion(): String = submit { s -> s.mem.readCString(s.x.sqlite3Libversion()) }
 
-    fun limit(id: Int, value: Int): Int = submit("limit") { s -> s.x.sqlite3Limit(s.db, id, value) }
+    fun limit(id: Int, value: Int): Int = submit { s -> s.x.sqlite3Limit(s.db, id, value) }
 
     // ---- stmt 수명 (사용자 소유 — Session.userStmts registry 가 누수/UAF 가드) ----
 
     /** prepare → stmt 핸들. 실패 시 예외 (errmsg 포함). */
-    fun prepare(sql: String): Int = submit("prepare:$sql") { s -> s.prepareUser(sql).first }
+    fun prepare(sql: String): Int = submit { s -> s.prepareUser(sql).first }
 
     /** finalize — 멱등. rc 0 고정 (registry 밖이면 no-op). */
-    fun finalizeStmt(st: Int): Int = submit("finalize") { s -> s.finalizeUser(st); 0 }
+    fun finalizeStmt(st: Int): Int = submit { s -> s.finalizeUser(st); 0 }
 
     /**
      * step — rc=15(PROTOCOL, WAL 내부 재시도 고갈)만 포트에서 흡수 (xerial 은 모르는 코드).
      * BUSY(5)는 그대로 — sqlite3_busy_timeout 의 내부 sleep 후에 도달한 값이라 JDBC 시맨틱의 몫.
      * 그 외 오류는 extended result code 로 (같은 태스크 안에서 조회 — 인터리빙 불가).
+     * 재시도 소진 시에도 15 를 새지 않고 BUSY 로 반환 — xerial 이 아는 "경합 지속" 코드.
      */
     fun step(st: Int): Int {
-        repeat(200) {
-            val rc = submit("step") { s ->
+        repeat(PROTOCOL_MAX_RETRIES) {
+            val rc = submit { s ->
                 when (val rc = s.x.sqlite3Step(st)) {
-                    100, 101, 5, 15 -> rc
+                    SQLITE_ROW, SQLITE_DONE, SQLITE_BUSY, SQLITE_PROTOCOL -> rc
                     else -> s.x.sqlite3ExtendedErrcode(s.db)
                 }
             }
-            if (rc != 15) return rc
-            Thread.sleep(5)
+            if (rc != SQLITE_PROTOCOL) return rc
+            Thread.sleep(PROTOCOL_RETRY_SLEEP_MS)
         }
-        return 15
+        return SQLITE_BUSY
     }
 
-    fun reset(st: Int): Int = submit("reset") { s -> s.x.sqlite3Reset(st) }
+    fun reset(st: Int): Int = submit { s -> s.x.sqlite3Reset(st) }
 
-    fun clearBindings(st: Int): Int = submit("clear_bindings") { s -> s.x.sqlite3ClearBindings(st) }
+    fun clearBindings(st: Int): Int = submit { s -> s.x.sqlite3ClearBindings(st) }
 
-    fun bindParameterCount(st: Int): Int = submit("bind_parameter_count") { s -> s.x.sqlite3BindParameterCount(st) }
+    fun bindParameterCount(st: Int): Int = submit { s -> s.x.sqlite3BindParameterCount(st) }
 
     // ---- 컬럼 메타/값 ----
 
-    fun columnCount(st: Int): Int = submit("column_count") { s -> s.x.sqlite3ColumnCount(st) }
+    fun columnCount(st: Int): Int = submit { s -> s.x.sqlite3ColumnCount(st) }
 
-    fun columnType(st: Int, col: Int): Int = submit("column_type") { s -> s.x.sqlite3ColumnType(st, col) }
+    fun columnType(st: Int, col: Int): Int = submit { s -> s.x.sqlite3ColumnType(st, col) }
 
     fun columnName(st: Int, col: Int): String? =
-        submit("column_name") { s -> cstrOrNull(s, s.x.sqlite3ColumnName(st, col)) }
+        submit { s -> cstrOrNull(s, s.x.sqlite3ColumnName(st, col)) }
 
     fun columnDecltype(st: Int, col: Int): String? =
-        submit("column_decltype") { s -> cstrOrNull(s, s.x.sqlite3ColumnDecltype(st, col)) }
+        submit { s -> cstrOrNull(s, s.x.sqlite3ColumnDecltype(st, col)) }
 
     fun columnTableName(st: Int, col: Int): String? =
-        submit("column_table_name") { s -> cstrOrNull(s, s.x.sqlite3ColumnTableName(st, col)) }
+        submit { s -> cstrOrNull(s, s.x.sqlite3ColumnTableName(st, col)) }
 
     /** NULL 값이면 null (xerial NativeDB 시맨틱). 길이는 column_text **후** column_bytes (sqlite 규약). */
-    fun columnText(st: Int, col: Int): String? = submit("column_text") { s ->
+    fun columnText(st: Int, col: Int): String? = submit { s ->
         val p = s.x.sqlite3ColumnText(st, col)
         if (p == 0) null else s.mem.readString(p, s.x.sqlite3ColumnBytes(st, col))
     }
 
-    fun columnBlob(st: Int, col: Int): ByteArray? = submit("column_blob") { s ->
+    fun columnBlob(st: Int, col: Int): ByteArray? = submit { s ->
         val p = s.x.sqlite3ColumnBlob(st, col)
         // 빈 blob 은 ptr 0 + type BLOB — null(=NULL 값)과 구분
         if (p == 0) {
-            if (s.x.sqlite3ColumnType(st, col) == 5) null else ByteArray(0)
+            if (s.x.sqlite3ColumnType(st, col) == TYPE_NULL) null else ByteArray(0)
         } else s.mem.readBytes(p, s.x.sqlite3ColumnBytes(st, col))
     }
 
-    fun columnLong(st: Int, col: Int): Long = submit("column_long") { s -> s.x.sqlite3ColumnInt64(st, col) }
+    fun columnLong(st: Int, col: Int): Long = submit { s -> s.x.sqlite3ColumnInt64(st, col) }
 
-    fun columnInt(st: Int, col: Int): Int = submit("column_int") { s -> s.x.sqlite3ColumnInt(st, col) }
+    fun columnInt(st: Int, col: Int): Int = submit { s -> s.x.sqlite3ColumnInt(st, col) }
 
-    fun columnDouble(st: Int, col: Int): Double = submit("column_double") { s -> s.x.sqlite3ColumnDouble(st, col) }
+    fun columnDouble(st: Int, col: Int): Double = submit { s -> s.x.sqlite3ColumnDouble(st, col) }
 
     /** xerial column_metadata: 컬럼별 [notnull, primarykey, autoincrement] — 한 태스크로 전 컬럼. */
-    fun columnMetadata(st: Int): Array<BooleanArray> = submit("column_metadata") { s ->
+    fun columnMetadata(st: Int): Array<BooleanArray> = submit { s ->
         val n = s.x.sqlite3ColumnCount(st)
         val out = s.x.malloc(12)   // notnull/pk/autoinc 3 슬롯
         try {
@@ -177,7 +176,75 @@ class WorkerDbPort private constructor(
 
     // ---- 바인딩 (타입 디스패치는 Session.bindOne — TRANSIENT + 워커 스크래치) ----
 
-    fun bind(st: Int, pos: Int, v: Any?): Int = submit("bind") { s -> s.bindOne(st, pos, v) }
+    fun bind(st: Int, pos: Int, v: Any?): Int = submit { s -> s.bindOne(st, pos, v) }
+
+    // ---- carray 바인딩 (JDBC setArray 백엔드 — `IN (SELECT value FROM carray(?))`) ----
+    // xDel = SQLITE_TRANSIENT(-1): sqlite3_carray_bind 가 sqlite3_malloc64 로 **딥카피**
+    // (TEXT 는 문자열까지) 하므로 게스트 버퍼는 호출 직후 해제 — malloc 혼합 함정(불변식 4) 회피.
+
+    fun bindCarrayInt64(st: Int, pos: Int, values: LongArray): Int = submit { s ->
+        val bytes = java.nio.ByteBuffer.allocate(8 * values.size)
+            .order(java.nio.ByteOrder.LITTLE_ENDIAN)
+            .apply { asLongBuffer().put(values) }.array()
+        withGuestBuf(s, bytes) { buf ->
+            s.x.sqlite3CarrayBind(st, pos, buf, values.size, CARRAY_INT64, SQLITE_TRANSIENT)
+        }
+    }
+
+    fun bindCarrayDouble(st: Int, pos: Int, values: DoubleArray): Int = submit { s ->
+        val bytes = java.nio.ByteBuffer.allocate(8 * values.size)
+            .order(java.nio.ByteOrder.LITTLE_ENDIAN)
+            .apply { asDoubleBuffer().put(values) }.array()
+        withGuestBuf(s, bytes) { buf ->
+            s.x.sqlite3CarrayBind(st, pos, buf, values.size, CARRAY_DOUBLE, SQLITE_TRANSIENT)
+        }
+    }
+
+    /**
+     * TEXT 배열: [char* × n][NUL-종단 UTF-8 …] 레이아웃. null 원소 = NULL 포인터 → SQL NULL.
+     * 임베디드 NUL 은 char* ABI 로 표현 불가(carray 가 strlen 으로 복사) — 조용한 절단 대신 즉시 거부.
+     */
+    fun bindCarrayText(st: Int, pos: Int, values: Array<String?>): Int {
+        values.forEachIndexed { i, v ->
+            require(v == null || v.indexOf('\u0000') < 0) {
+                "carray TEXT element[$i] contains embedded NUL — char* ABI 로 표현 불가"
+            }
+        }
+        return bindCarrayTextChecked(st, pos, values)
+    }
+
+    private fun bindCarrayTextChecked(st: Int, pos: Int, values: Array<String?>): Int = submit { s ->
+        val encoded = values.map { it?.toByteArray(Charsets.UTF_8) }
+        val ptrArea = 4 * values.size
+        val total = ptrArea + encoded.sumOf { (it?.size ?: -1) + 1 }
+        val buf = s.x.malloc(maxOf(total, 1))
+        try {
+            val ptrs = java.nio.ByteBuffer.allocate(ptrArea).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+            var strOff = buf + ptrArea
+            for (e in encoded) {
+                if (e == null) { ptrs.putInt(0); continue }
+                ptrs.putInt(strOff)
+                s.mem.write(strOff, e)
+                s.mem.writeByte(strOff + e.size, 0)
+                strOff += e.size + 1
+            }
+            if (values.isNotEmpty()) s.mem.write(buf, ptrs.array())
+            s.x.sqlite3CarrayBind(st, pos, buf, values.size, CARRAY_TEXT, SQLITE_TRANSIENT)
+        } finally {
+            s.x.free(buf)
+        }
+    }
+
+    /** [bytes] 를 게스트 스크래치에 쓰고 [fn] 실행 후 해제 (빈 배열도 유효 포인터 1바이트). */
+    private inline fun withGuestBuf(s: SqliteWorker.Session, bytes: ByteArray, fn: (Int) -> Int): Int {
+        val buf = s.x.malloc(maxOf(bytes.size, 1))
+        try {
+            if (bytes.isNotEmpty()) s.mem.write(buf, bytes)
+            return fn(buf)
+        } finally {
+            s.x.free(buf)
+        }
+    }
 
     // ---- 콜백 등록 (helpers.c 테이블 슬롯 + user_data=레지스트리 키, §10 ①) ----
     // 등록 자체는 그 커넥션 db 에 대한 호출이라 워커 태스크. 콜백 "실행"은 wasm step 안에서
@@ -190,7 +257,7 @@ class WorkerDbPort private constructor(
 
     /** create_function_v2/window — [key] = 레지스트리 키. eTextRep 에 DETERMINISTIC 등 플래그 포함. */
     fun createFunction(name: String, nArgs: Int, eTextRep: Int, key: Int, kind: Int): Int =
-        submit("create_function:$name") { s ->
+        submit { s ->
             val p = rt.cbPtrs
             when (kind) {
                 FnKind.SCALAR -> s.x.sqlite3CreateFunctionV2(
@@ -204,42 +271,42 @@ class WorkerDbPort private constructor(
 
     /** 같은 이름을 NULL 로 재등록 → sqlite 가 xDestroy(key) 호출 → 레지스트리 자동 해제. */
     fun destroyFunction(name: String, nArgs: Int, eTextRep: Int): Int =
-        submit("destroy_function:$name") { s ->
+        submit { s ->
             s.x.sqlite3CreateFunctionV2(s.db, s.sqlPtr(name), nArgs, eTextRep, 0, 0, 0, 0, 0)
         }
 
     fun createCollation(name: String, eTextRep: Int, key: Int): Int =
-        submit("create_collation:$name") { s ->
+        submit { s ->
             val p = rt.cbPtrs
             s.x.sqlite3CreateCollationV2(s.db, s.sqlPtr(name), eTextRep, key, p.xCompare, p.xDestroyCollation)
         }
 
     fun destroyCollation(name: String, eTextRep: Int): Int =
-        submit("destroy_collation:$name") { s ->
+        submit { s ->
             s.x.sqlite3CreateCollationV2(s.db, s.sqlPtr(name), eTextRep, 0, 0, 0)
         }
 
     /** [key] 0 = 해제. busy_timeout 과 상호 배타 (sqlite 시맨틱 — 마지막 설정이 이김). */
-    fun busyHandler(key: Int): Int = submit("busy_handler") { s ->
+    fun busyHandler(key: Int): Int = submit { s ->
         val p = rt.cbPtrs
         s.x.sqlite3BusyHandler(s.db, if (key == 0) 0 else p.xBusy, key)
     }
 
     /** [key] 0 = 해제. */
-    fun progressHandler(vmCalls: Int, key: Int): Unit = submit("progress_handler") { s ->
+    fun progressHandler(vmCalls: Int, key: Int): Unit = submit { s ->
         val p = rt.cbPtrs
         s.x.sqlite3ProgressHandler(s.db, vmCalls, if (key == 0) 0 else p.xProgress, key)
     }
 
     /** commit/rollback 훅 쌍 — 키 0 = 해제. 이전 user_data 반환은 버린다 (키 해제는 호출측). */
-    fun commitHooks(commitKey: Int, rollbackKey: Int): Unit = submit("commit_hooks") { s ->
+    fun commitHooks(commitKey: Int, rollbackKey: Int): Unit = submit { s ->
         val p = rt.cbPtrs
         s.x.sqlite3CommitHook(s.db, if (commitKey == 0) 0 else p.xCommit, commitKey)
         s.x.sqlite3RollbackHook(s.db, if (rollbackKey == 0) 0 else p.xRollback, rollbackKey)
     }
 
     /** [key] 0 = 해제. */
-    fun updateHook(key: Int): Unit = submit("update_hook") { s ->
+    fun updateHook(key: Int): Unit = submit { s ->
         val p = rt.cbPtrs
         s.x.sqlite3UpdateHook(s.db, if (key == 0) 0 else p.xUpdate, key)
     }
@@ -266,7 +333,7 @@ class WorkerDbPort private constructor(
         val tmpName = "backup-${System.nanoTime()}.db"
         val hostFile = hostTmp.resolve(tmpName)
         try {
-            val rc = submit("backup:$srcDbName") { s ->
+            val rc = submit { s ->
                 runBackup(s, srcDbName, "/tmp/$tmpName", toDest = true, observer, sleepMillis, nTimeoutLimit, pagesPerStep)
             }
             if (rc == 0) {
@@ -292,7 +359,7 @@ class WorkerDbPort private constructor(
         val hostFile = hostTmp.resolve(tmpName)
         Files.copy(srcFile, hostFile, StandardCopyOption.REPLACE_EXISTING)
         try {
-            return submit("restore:$destDbName") { s ->
+            return submit { s ->
                 runBackup(s, destDbName, "/tmp/$tmpName", toDest = false, observer, sleepMillis, nTimeoutLimit, pagesPerStep)
             }
         } finally {
@@ -316,7 +383,7 @@ class WorkerDbPort private constructor(
         try {
             s.mem.write(mainPtr, "main".toByteArray())
             s.mem.writeByte(mainPtr + 4, 0)
-            val openFlags = if (toDest) 6 else 1   // dest: RW|CREATE / src: READONLY
+            val openFlags = if (toDest) SqliteWorker.OPEN_DEFAULT else SqliteWorker.OPEN_READONLY
             var rc = s.x.sqlite3OpenV2(s.sqlPtr(guestPath), pp, openFlags, 0)
             val fileDb = s.mem.readInt(pp)
             if (rc != 0) {
@@ -334,14 +401,14 @@ class WorkerDbPort private constructor(
                 var nTimeout = 0
                 do {
                     rc = s.x.sqlite3BackupStep(pBackup, pagesPerStep)
-                    if (observer != null && (rc == 0 || rc == 101)) {
+                    if (observer != null && (rc == SQLITE_OK || rc == SQLITE_DONE)) {
                         observer.progress(s.x.sqlite3BackupRemaining(pBackup), s.x.sqlite3BackupPagecount(pBackup))
                     }
-                    if (rc == 5 || rc == 6) {   // BUSY/LOCKED
+                    if (rc == SQLITE_BUSY || rc == SQLITE_LOCKED) {
                         if (nTimeout++ >= nTimeoutLimit) break
                         Thread.sleep(sleepMillis.toLong())
                     }
-                } while (rc == 0 || rc == 5 || rc == 6)
+                } while (rc == SQLITE_OK || rc == SQLITE_BUSY || rc == SQLITE_LOCKED)
                 s.x.sqlite3BackupFinish(pBackup)
                 val frc = s.x.sqlite3ExtendedErrcode(if (toDest) fileDb else s.db)
                 if (toDest && frc == 0) {
@@ -360,7 +427,7 @@ class WorkerDbPort private constructor(
     }
 
     /** sqlite3_serialize — [schema] 의 전체 DB 이미지. 실패 시 null. */
-    fun serialize(schema: String): ByteArray? = submit("serialize:$schema") { s ->
+    fun serialize(schema: String): ByteArray? = submit { s ->
         val sizePtr = s.x.malloc(8)
         try {
             var needFree = false
@@ -390,9 +457,9 @@ class WorkerDbPort private constructor(
      * 섞으면 (크기 헤더 불일치로) buf-8 해제 = 힙 메타데이터 오염 → 이후 dlmalloc 무한 스핀/유령 락
      * (§11.3 — SerializeTest 행 디버깅의 근원이었음).
      */
-    fun deserialize(schema: String, data: ByteArray): Int = submit("deserialize:$schema") { s ->
+    fun deserialize(schema: String, data: ByteArray): Int = submit { s ->
         val buf = s.x.sqlite3Malloc64(maxOf(data.size, 1).toLong())
-        if (buf == 0) return@submit 7   // SQLITE_NOMEM
+        if (buf == 0) return@submit SQLITE_NOMEM
         s.mem.write(buf, data)
         s.x.sqlite3Deserialize(s.db, s.sqlPtr(schema), buf, data.size.toLong(), data.size.toLong(), 3)
     }
@@ -408,88 +475,6 @@ class WorkerDbPort private constructor(
             worker.stop()
         } finally {
             release.run()
-        }
-    }
-}
-
-/**
- * [WorkerDbPort] 의 런타임 공유 레지스트리.
- *  - 파일: canonical 경로별 런타임 1개 (refcount) — [DbOwnerLock] 의 "파일당 런타임 1개" 강제와 양립.
- *    같은 JVM 의 JDBC 커넥션들이 같은 파일을 열면 **자동으로 워커들로 합류** (다중 커넥션 WAL).
- *  - `:memory:`: 글로벌 런타임 1개 (lazy, refcount) — 워커마다 사유 인메모리 DB 라 공유 없음.
- */
-internal object WorkerDbRuntimes {
-    private class FileEntry(val handle: SqliteDataSource.RuntimeHandle) {
-        var refs = 0
-        val spawnLock = ReentrantLock()
-    }
-
-    private val files = HashMap<Path, FileEntry>()
-    private var memRt: JvmVfsRuntime? = null
-    private var memTmp: Path? = null
-    private var memRefs = 0
-    private val memSpawnLock = ReentrantLock()
-
-    @Synchronized
-    fun openFile(path: Path, readOnly: Boolean): WorkerDbPort {
-        val dir = path.parent ?: error("절대 경로 필요: $path")
-        val entry = files.getOrPut(path) {
-            FileEntry(SqliteDataSource.openRuntime(dir, path.fileName.toString()))
-        }
-        entry.refs++
-        try {
-            // openRuntime 이 "/tmp" 를 hostDir/.tmp 로 preopen 함 (sorter 스필과 공유)
-            return WorkerDbPort.spawn(
-                entry.handle.rt, entry.handle.guestPath, entry.spawnLock, readOnly, dir.resolve(".tmp")
-            ) { releaseFile(path) }
-        } catch (t: Throwable) {
-            releaseFile(path)
-            throw t
-        }
-    }
-
-    @Synchronized
-    private fun releaseFile(path: Path) {
-        val entry = files[path] ?: return
-        if (--entry.refs <= 0) {
-            files.remove(path)
-            try {
-                entry.handle.rt.close()
-            } finally {
-                entry.handle.ownerLock.close()
-            }
-        }
-    }
-
-    @Synchronized
-    fun openMemory(readOnly: Boolean): WorkerDbPort {
-        val rt = memRt ?: run {
-            // backup/restore 중계용 "/tmp" — :memory: 도 파일 백업이 가능해야 한다 (xerial 시맨틱)
-            val tmp = Files.createTempDirectory("sqlite-jvm-mem")
-            memTmp = tmp
-            JvmVfsRuntime(mapOf("/tmp" to tmp)).also { memRt = it }
-        }
-        memRefs++
-        try {
-            return WorkerDbPort.spawn(rt, ":memory:", memSpawnLock, readOnly, memTmp!!) { releaseMemory() }
-        } catch (t: Throwable) {
-            releaseMemory()
-            throw t
-        }
-    }
-
-    @Synchronized
-    private fun releaseMemory() {
-        if (--memRefs <= 0) {
-            memRt?.close()
-            memRt = null
-            memTmp?.let { tmp ->
-                runCatching {
-                    Files.list(tmp).use { l -> l.forEach { Files.deleteIfExists(it) } }
-                    Files.deleteIfExists(tmp)
-                }
-            }
-            memTmp = null
         }
     }
 }

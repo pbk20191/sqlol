@@ -1,11 +1,15 @@
 package org.example.sqlite.jdbc.jdbc4
 
+import org.example.sqlite.jdbc.SQLiteArray
+import org.example.sqlite.jdbc.SqliteBlob
+import org.example.sqlite.jdbc.SqliteNClob
+import org.example.sqlite.jdbc.core.DB
 import org.example.sqlite.jdbc.jdbc3.JDBC3Connection
 import java.sql.*
 import java.sql.Array
-import java.util.*
+import java.util.Properties
 
-class JDBC4Connection(url: String, fileName: String, prop: Properties) : JDBC3Connection(url, fileName, prop) {
+class JDBC4Connection(db: DB) : JDBC3Connection(db) {
     @Throws(SQLException::class)
     public override fun createStatement(rst: Int, rsc: Int, rsh: Int): Statement {
         checkOpen()
@@ -43,20 +47,17 @@ class JDBC4Connection(url: String, fileName: String, prop: Properties) : JDBC3Co
 
     @Throws(SQLException::class)
     override fun createClob(): Clob? {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        return SqliteNClob()
     }
 
     @Throws(SQLException::class)
     override fun createBlob(): Blob? {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        return SqliteBlob()
     }
 
     @Throws(SQLException::class)
     override fun createNClob(): NClob? {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        return SqliteNClob()
     }
 
     @Throws(SQLException::class)
@@ -96,7 +97,7 @@ class JDBC4Connection(url: String, fileName: String, prop: Properties) : JDBC3Co
 
     @Throws(SQLException::class)
     override fun createArrayOf(typeName: String, elements: kotlin.Array<Any?>): Array? {
-        // TODO Auto-generated method stub
-        return null
+        // carray 기반 — PreparedStatement.setArray + `IN (SELECT value FROM carray(?))` 에서 사용
+        return SQLiteArray(typeName, elements)
     }
 }

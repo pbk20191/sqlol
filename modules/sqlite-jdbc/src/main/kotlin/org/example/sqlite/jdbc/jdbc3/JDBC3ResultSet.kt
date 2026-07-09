@@ -61,7 +61,7 @@ protected constructor(stmt: CoreStatement) : CoreResultSet(stmt) {
 
         // do the real work
         val statusCode =
-            stmt.pointer!!.safeRunInt<SQLException> { obj, stmt: Long -> obj.step(stmt) }
+            stmt.pointer!!.safeRunInt { obj, stmt: Long -> obj.step(stmt) }
         when (statusCode) {
             Codes.SQLITE_DONE -> {
                 pastLastRow = true
@@ -264,7 +264,7 @@ protected constructor(stmt: CoreStatement) : CoreResultSet(stmt) {
      */
     @Throws(SQLException::class)
     fun getBytes(col: Int): ByteArray? {
-        return stmt.pointer!!.safeRun<ByteArray?, SQLException> { db, ptr ->
+        return stmt.pointer!!.safeRun<ByteArray?> { db, ptr ->
             db.column_blob(
                 ptr,
                 markCol(col)
@@ -423,7 +423,7 @@ protected constructor(stmt: CoreStatement) : CoreResultSet(stmt) {
      */
     @Throws(SQLException::class)
     fun getInt(col: Int): Int {
-        return stmt.pointer!!.safeRunInt<SQLException> { db, ptr: Long ->
+        return stmt.pointer!!.safeRunInt { db, ptr: Long ->
             db.column_int(
                 ptr,
                 markCol(col)
@@ -935,7 +935,7 @@ protected constructor(stmt: CoreStatement) : CoreResultSet(stmt) {
 
     @Throws(SQLException::class)
     private fun getColumnDeclType(col: Int): String? {
-        var declType: String? = stmt.pointer!!.safeRun<String?, SQLException> { db, ptr ->
+        var declType: String? = stmt.pointer!!.safeRun<String?> { db, ptr ->
             db.column_decltype(
                 ptr,
                 checkCol(col)
@@ -1173,7 +1173,7 @@ protected constructor(stmt: CoreStatement) : CoreResultSet(stmt) {
 
     @Throws(SQLException::class)
     protected fun safeGetColumnType(col: Int): Int {
-        return stmt.pointer!!.safeRunInt<SQLException> { db, ptr: Long ->
+        return stmt.pointer!!.safeRunInt { db, ptr: Long ->
             db.column_type(
                 ptr,
                 col
@@ -1183,7 +1183,7 @@ protected constructor(stmt: CoreStatement) : CoreResultSet(stmt) {
 
     @Throws(SQLException::class)
     private fun safeGetLongCol(col: Int): Long {
-        return stmt.pointer!!.safeRunLong<SQLException> { db, ptr: Long ->
+        return stmt.pointer!!.safeRunLong { db, ptr: Long ->
             db.column_long(
                 ptr,
                 markCol(col)
@@ -1193,7 +1193,7 @@ protected constructor(stmt: CoreStatement) : CoreResultSet(stmt) {
 
     @Throws(SQLException::class)
     private fun safeGetDoubleCol(col: Int): Double {
-        return stmt.pointer!!.safeRunDouble<SQLException> { db, ptr: Long ->
+        return stmt.pointer!!.safeRunDouble { db, ptr: Long ->
             db.column_double(
                 ptr,
                 markCol(col)
@@ -1203,7 +1203,7 @@ protected constructor(stmt: CoreStatement) : CoreResultSet(stmt) {
 
     @Throws(SQLException::class)
     private fun safeGetColumnText(col: Int): String? {
-        return stmt.pointer!!.safeRun<String?, SQLException> { db, ptr: Long ->
+        return stmt.pointer!!.safeRun<String?> { db, ptr: Long ->
             db.column_text(
                 ptr,
                 markCol(col)
@@ -1213,8 +1213,8 @@ protected constructor(stmt: CoreStatement) : CoreResultSet(stmt) {
 
     @Throws(SQLException::class)
     private fun safeGetColumnTableName(col: Int): String? {
-        return stmt.pointer!!.safeRun<String?, SQLException> { db, ptr: Long ->
-            db!!.column_table_name(
+        return stmt.pointer!!.safeRun<String?> { db, ptr: Long ->
+            db.column_table_name(
                 ptr,
                 checkCol(col)
             )
@@ -1223,7 +1223,7 @@ protected constructor(stmt: CoreStatement) : CoreResultSet(stmt) {
 
     @Throws(SQLException::class)
     private fun safeGetColumnName(col: Int): String {
-        return stmt.pointer!!.safeRun<String, SQLException> { db, ptr: Long ->
+        return stmt.pointer!!.safeRun<String> { db, ptr: Long ->
             db.column_name(
                 ptr,
                 checkCol(col)

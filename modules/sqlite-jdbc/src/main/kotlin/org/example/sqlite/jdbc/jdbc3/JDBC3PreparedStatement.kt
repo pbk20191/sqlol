@@ -1,5 +1,6 @@
 package org.example.sqlite.jdbc.jdbc3
 
+import org.example.sqlite.jdbc.SQLiteArray
 import org.example.sqlite.jdbc.SQLiteConnection
 import org.example.sqlite.jdbc.core.CorePreparedStatement
 import org.example.sqlite.jdbc.core.DB
@@ -23,7 +24,7 @@ abstract class JDBC3PreparedStatement protected constructor(conn: SQLiteConnecti
     @Throws(SQLException::class)
     fun clearParameters() {
         checkOpen()
-        pointer!!.safeRunConsume<SQLException> { obj, stmt -> obj.clear_bindings(stmt) }
+        pointer!!.safeRunConsume { obj, stmt -> obj.clear_bindings(stmt) }
         if (batch != null) for (i in batchPos..<batchPos + paramCount) batch!![i] = null
     }
 
@@ -34,7 +35,7 @@ abstract class JDBC3PreparedStatement protected constructor(conn: SQLiteConnecti
     fun execute(): Boolean {
         checkOpen()
         rs.close()
-        pointer!!.safeRunConsume<SQLException> { obj, stmt -> obj.reset(stmt) }
+        pointer!!.safeRunConsume { obj, stmt -> obj.reset(stmt) }
         exhaustedResults = false
 
         if (this.conn is JDBC3Connection) {
@@ -54,7 +55,7 @@ abstract class JDBC3PreparedStatement protected constructor(conn: SQLiteConnecti
                 }
                 return@withConnectionTimeout 0 != columnCount
             } finally {
-                if (!success && !pointer!!.isClosed()) pointer!!.safeRunConsume<SQLException> { obj, stmt ->
+                if (!success && !pointer!!.isClosed()) pointer!!.safeRunConsume { obj, stmt ->
                     obj.reset(
                         stmt
                     )
@@ -76,7 +77,7 @@ abstract class JDBC3PreparedStatement protected constructor(conn: SQLiteConnecti
         }
 
         rs.close()
-        pointer!!.safeRunConsume<SQLException> { obj, stmt -> obj.reset(stmt) }
+        pointer!!.safeRunConsume { obj, stmt -> obj.reset(stmt) }
         exhaustedResults = false
 
         if (this.conn is JDBC3Connection) {
@@ -91,7 +92,7 @@ abstract class JDBC3PreparedStatement protected constructor(conn: SQLiteConnecti
                 success = true
             } finally {
                 if (!success && !pointer!!.isClosed()) {
-                    pointer!!.safeRunInt<SQLException> { obj, stmt ->
+                    pointer!!.safeRunInt { obj, stmt ->
                         obj.reset(
                             stmt
                         )
@@ -122,7 +123,7 @@ abstract class JDBC3PreparedStatement protected constructor(conn: SQLiteConnecti
         }
 
         rs.close()
-        pointer!!.safeRunConsume<SQLException>(SafePtrConsumer { obj: DB?, stmt: Long -> obj!!.reset(stmt) })
+        pointer!!.safeRunConsume { obj, stmt -> obj.reset(stmt) }
         exhaustedResults = false
 
         if (this.conn is JDBC3Connection) {
@@ -308,11 +309,13 @@ abstract class JDBC3PreparedStatement protected constructor(conn: SQLiteConnecti
      */
     @Throws(SQLException::class)
     fun setBinaryStream(pos: Int, istream: InputStream?, length: Int) {
-        if (istream == null && length == 0) {
+        // null 스트림은 length 와 무관하게 SQL NULL — length>0 로 흘려보내면 NPE 가 JDBC 계약을 깬다.
+        if (istream == null) {
             setBytes(pos, null)
+            return
         }
 
-        setBytes(pos, readBytes(istream!!, length))
+        setBytes(pos, readBytes(istream, length))
     }
 
     /**
@@ -328,12 +331,13 @@ abstract class JDBC3PreparedStatement protected constructor(conn: SQLiteConnecti
      */
     @Throws(SQLException::class)
     fun setUnicodeStream(pos: Int, istream: InputStream?, length: Int) {
-        if (istream == null && length == 0) {
+        if (istream == null) {
             setString(pos, null)
+            return
         }
 
         try {
-            setString(pos, String(readBytes(istream!!, length), charset("UTF-8")))
+            setString(pos, String(readBytes(istream, length), charset("UTF-8")))
         } catch (e: UnsupportedEncodingException) {
             val exception = SQLException("UTF-8 is not supported")
 
@@ -579,18 +583,23 @@ abstract class JDBC3PreparedStatement protected constructor(conn: SQLiteConnecti
 
     // PreparedStatement ////////////////////////////////////////////
     @Throws(SQLException::class)
-    fun setArray(i: Int, x: Array) {
-        throw unsupported()
+    fun setArray(i: Int, x: Array?) {
+        if (x == null) { setBytes(i, null); return }
+        val arr = x as? SQLiteArray
+            ?: throw SQLException("setArray: only arrays from Connection.createArrayOf are supported")
+        batch(i, arr)   // 바인딩 시점에 DB.sqlbind 가 carray_bind 로 디스패치
     }
 
     @Throws(SQLException::class)
-    fun setBlob(i: Int, x: Blob) {
-        throw unsupported()
+    fun setBlob(i: Int, x: Blob?) {
+        if (x == null) setBytes(i, null)
+        else setBytes(i, x.getBytes(1, x.length().toInt()))
     }
 
     @Throws(SQLException::class)
-    fun setClob(i: Int, x: Clob) {
-        throw unsupported()
+    fun setClob(i: Int, x: Clob?) {
+        if (x == null) setString(i, null)
+        else setString(i, x.getSubString(1, x.length().toInt()))
     }
 
     @Throws(SQLException::class)

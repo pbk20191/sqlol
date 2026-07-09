@@ -93,7 +93,7 @@ abstract class CoreStatement protected constructor(@JvmField val conn: SQLiteCon
             }
         }
 
-        return pointer!!.safeRunInt<SQLException> { obj, stmt -> obj.column_count(stmt) } != 0
+        return pointer!!.safeRunInt { obj, stmt -> obj.column_count(stmt) } != 0
     }
 
     /**
@@ -126,11 +126,7 @@ abstract class CoreStatement protected constructor(@JvmField val conn: SQLiteCon
             }
         }
 
-        return pointer!!.safeRunInt<SQLException>(SafeStmtPtr.SafePtrIntFunction { obj: DB?, stmt: Long ->
-            obj!!.column_count(
-                stmt
-            )
-        }) != 0
+        return pointer!!.safeRunInt { obj, stmt -> obj.column_count(stmt) } != 0
     }
 
     @Throws(SQLException::class)

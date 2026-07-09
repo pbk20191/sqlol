@@ -1,7 +1,7 @@
 package org.example.sqlite
 
-import com.dylibso.chicory.runtime.ByteBufferMemory
-import com.dylibso.chicory.wasm.types.MemoryLimits
+import run.endive.runtime.ByteBufferMemory
+import run.endive.wasm.types.MemoryLimits
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.test.Test
 import kotlin.test.assertTrue

@@ -65,6 +65,16 @@ abstract class CoreDatabaseMetaData protected constructor(conn: SQLiteConnection
     abstract val generatedKeys: ResultSet?
 
     /**
+     * 열려 있는 커넥션. 닫힌 뒤 접근은 [SQLException] ("connection closed") — 서브클래스의
+     * `conn!!` 남용을 대체하는 단일 게이트.
+     *
+     * @throws SQLException
+     */
+    protected val db: SQLiteConnection
+        @Throws(SQLException::class)
+        get() = conn ?: throw SQLException("connection closed")
+
+    /**
      * @throws SQLException
      */
     @Throws(SQLException::class)
@@ -85,75 +95,23 @@ abstract class CoreDatabaseMetaData protected constructor(conn: SQLiteConnection
         }
 
         try {
-            if (getTables != null) {
-                getTables!!.close()
-            }
-            if (getTableTypes != null) {
-                getTableTypes!!.close()
-            }
-            if (getTypeInfo != null) {
-                getTypeInfo!!.close()
-            }
-            if (getCatalogs != null) {
-                getCatalogs!!.close()
-            }
-            if (getSchemas != null) {
-                getSchemas!!.close()
-            }
-            if (getUDTs != null) {
-                getUDTs!!.close()
-            }
-            if (getColumnsTblName != null) {
-                getColumnsTblName!!.close()
-            }
-            if (getSuperTypes != null) {
-                getSuperTypes!!.close()
-            }
-            if (getSuperTables != null) {
-                getSuperTables!!.close()
-            }
-            if (getTablePrivileges != null) {
-                getTablePrivileges!!.close()
-            }
-            if (getIndexInfo != null) {
-                getIndexInfo!!.close()
-            }
-            if (getProcedures != null) {
-                getProcedures!!.close()
-            }
-            if (getProcedureColumns != null) {
-                getProcedureColumns!!.close()
-            }
-            if (getAttributes != null) {
-                getAttributes!!.close()
-            }
-            if (getBestRowIdentifier != null) {
-                getBestRowIdentifier!!.close()
-            }
-            if (getVersionColumns != null) {
-                getVersionColumns!!.close()
-            }
-            if (getColumnPrivileges != null) {
-                getColumnPrivileges!!.close()
-            }
-
-            getTables = null
-            getTableTypes = null
-            getTypeInfo = null
-            getCatalogs = null
-            getSchemas = null
-            getUDTs = null
-            getColumnsTblName = null
-            getSuperTypes = null
-            getSuperTables = null
-            getTablePrivileges = null
-            getIndexInfo = null
-            getProcedures = null
-            getProcedureColumns = null
-            getAttributes = null
-            getBestRowIdentifier = null
-            getVersionColumns = null
-            getColumnPrivileges = null
+            getTables?.close(); getTables = null
+            getTableTypes?.close(); getTableTypes = null
+            getTypeInfo?.close(); getTypeInfo = null
+            getCatalogs?.close(); getCatalogs = null
+            getSchemas?.close(); getSchemas = null
+            getUDTs?.close(); getUDTs = null
+            getColumnsTblName?.close(); getColumnsTblName = null
+            getSuperTypes?.close(); getSuperTypes = null
+            getSuperTables?.close(); getSuperTables = null
+            getTablePrivileges?.close(); getTablePrivileges = null
+            getIndexInfo?.close(); getIndexInfo = null
+            getProcedures?.close(); getProcedures = null
+            getProcedureColumns?.close(); getProcedureColumns = null
+            getAttributes?.close(); getAttributes = null
+            getBestRowIdentifier?.close(); getBestRowIdentifier = null
+            getVersionColumns?.close(); getVersionColumns = null
+            getColumnPrivileges?.close(); getColumnPrivileges = null
         } finally {
             conn = null
         }

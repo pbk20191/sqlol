@@ -130,7 +130,7 @@ class CrashRecoveryTest {
         val javaBin = Path.of(System.getProperty("java.home"), "bin", "java").toString()
         val cp = System.getProperty("java.class.path")
         val proc = ProcessBuilder(
-            javaBin, "-cp", cp, "org.example.sqlite.CrashSubprocessMain", dir.toString(), n.toString(),
+            javaBin, "-cp", cp, "org.example.sqlite.core.CrashSubprocessMain", dir.toString(), n.toString(),
         ).redirectErrorStream(true).start()
 
         try {

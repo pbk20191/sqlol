@@ -78,13 +78,18 @@ class SqliteWal private constructor(
          * [hostDir]/[fileName] 파일 DB 를 writer 1 + reader [readers] 워커로 연다.
          * 스키마(CREATE TABLE 등)는 생성 후 [exec] 로 만든다.
          */
+        @OptIn(InternalRuntimeApi::class)
         fun open(hostDir: Path, fileName: String, readers: Int = 3): SqliteWal {
-            val h = SqliteDataSource.openRuntime(hostDir, fileName)
-            // 순차 spawn (§9: 동시 open/WAL/memory.grow 는 공유메모리 경합 → 하나씩)
-            val writer = SqliteWorker.spawn(h.rt, h.guestPath)
-            val readerWorkers = (1..readers).map { SqliteWorker.spawn(h.rt, h.guestPath) }
-            val pool = LinkedBlockingQueue<SqliteWorker>(readerWorkers)
-            return SqliteWal(h.rt, h.ownerLock, writer, readerWorkers, pool)
+            when (val h = SqliteDataSource.openRuntime(hostDir, fileName)) {
+                is SqliteDataSource.RuntimeHandle -> {
+                    // 순차 spawn (§9: 동시 open/WAL/memory.grow 는 공유메모리 경합 → 하나씩)
+                    val writer = SqliteWorker.spawn(h.rt, h.guestPath)
+                    val readerWorkers = (1..readers).map { SqliteWorker.spawn(h.rt, h.guestPath) }
+                    val pool = LinkedBlockingQueue<SqliteWorker>(readerWorkers)
+                    return SqliteWal(h.rt, h.ownerLock!!, writer, readerWorkers, pool)
+                }
+
+            }
         }
     }
 }

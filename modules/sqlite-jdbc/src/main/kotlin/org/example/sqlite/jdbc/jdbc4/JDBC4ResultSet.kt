@@ -8,6 +8,7 @@ import java.math.BigDecimal
 import java.net.MalformedURLException
 import java.net.URL
 import javax.sql.rowset.serial.SerialBlob
+import org.example.sqlite.jdbc.SqliteNClob
 import java.sql.*
 import java.sql.Array
 import java.time.LocalDate
@@ -100,14 +101,14 @@ class JDBC4ResultSet(stmt: CoreStatement) : JDBC3ResultSet(stmt), ResultSet, Res
 
     @Throws(SQLException::class)
     override fun getNClob(columnIndex: Int): NClob? {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        // SQLite 에 national-character 구분 없음 — Clob 와 동일
+        val s = getString(columnIndex)
+        return if (s == null) null else SqliteNClob(s)
     }
 
     @Throws(SQLException::class)
     override fun getNClob(columnLabel: String): NClob? {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        return getNClob(findColumn(columnLabel))
     }
 
     @Throws(SQLException::class)
@@ -485,13 +486,13 @@ class JDBC4ResultSet(stmt: CoreStatement) : JDBC3ResultSet(stmt), ResultSet, Res
     @Throws(SQLException::class)
     override fun getClob(col: Int): Clob? {
         val clob = getString(col)
-        return if (clob == null) null else SqliteClob(clob)
+        return if (clob == null) null else SqliteNClob(clob)
     }
 
     @Throws(SQLException::class)
     override fun getClob(col: String): Clob? {
         val clob = getString(col)
-        return if (clob == null) null else SqliteClob(clob)
+        return if (clob == null) null else SqliteNClob(clob)
     }
 
     @Throws(SQLException::class)
@@ -838,97 +839,5 @@ class JDBC4ResultSet(stmt: CoreStatement) : JDBC3ResultSet(stmt), ResultSet, Res
     @Throws(SQLException::class)
     override fun refreshRow() {
         throw unsupported()
-    }
-
-    internal inner class SqliteClob(data: String) : NClob {
-        private var data: String?
-
-        init {
-            this.data = data
-        }
-
-        @Throws(SQLException::class)
-        override fun free() {
-            data = null
-        }
-
-        @Throws(SQLException::class)
-        override fun getAsciiStream(): InputStream? {
-            return getAsciiStreamInternal(data)
-        }
-
-        @Throws(SQLException::class)
-        override fun getCharacterStream(): Reader? {
-            return getNCharacterStreamInternal(data)
-        }
-
-        @Throws(SQLException::class)
-        override fun getCharacterStream(arg0: Long, arg1: Long): Reader? {
-            return getNCharacterStreamInternal(data)
-        }
-
-        @Throws(SQLException::class)
-        override fun getSubString(position: Long, length: Int): String {
-            if (data == null) {
-                throw SQLException("no data")
-            }
-            if (position < 1) {
-                throw SQLException("Position must be greater than or equal to 1")
-            }
-            if (length < 0) {
-                throw SQLException("Length must be greater than or equal to 0")
-            }
-            val start = position.toInt() - 1
-            return data!!.substring(start, min(start + length, data!!.length))
-        }
-
-        @Throws(SQLException::class)
-        override fun length(): Long {
-            if (data == null) {
-                throw SQLException("no data")
-            }
-            return data!!.length.toLong()
-        }
-
-        @Throws(SQLException::class)
-        override fun position(arg0: String, arg1: Long): Long {
-            unsupported()
-            return -1
-        }
-
-        @Throws(SQLException::class)
-        override fun position(arg0: Clob, arg1: Long): Long {
-            unsupported()
-            return -1
-        }
-
-        @Throws(SQLException::class)
-        override fun setAsciiStream(arg0: Long): OutputStream? {
-            unsupported()
-            return null
-        }
-
-        @Throws(SQLException::class)
-        override fun setCharacterStream(arg0: Long): Writer? {
-            unsupported()
-            return null
-        }
-
-        @Throws(SQLException::class)
-        override fun setString(arg0: Long, arg1: String): Int {
-            unsupported()
-            return -1
-        }
-
-        @Throws(SQLException::class)
-        override fun setString(arg0: Long, arg1: String, arg2: Int, arg3: Int): Int {
-            unsupported()
-            return -1
-        }
-
-        @Throws(SQLException::class)
-        override fun truncate(arg0: Long) {
-            unsupported()
-        }
     }
 }

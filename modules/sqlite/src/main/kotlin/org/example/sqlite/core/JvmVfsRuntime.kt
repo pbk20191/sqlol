@@ -1,17 +1,17 @@
 package org.example.sqlite.core
 
-import com.dylibso.chicory.runtime.ByteBufferMemory
-import com.dylibso.chicory.runtime.HostFunction
-import com.dylibso.chicory.runtime.ImportMemory
-import com.dylibso.chicory.runtime.ImportValues
-import com.dylibso.chicory.runtime.Instance
-import com.dylibso.chicory.runtime.Memory
-import com.dylibso.chicory.runtime.WasmFunctionHandle
-import com.dylibso.chicory.wasm.types.ExternalType
-import com.dylibso.chicory.wasm.types.MemoryLimits
-import com.dylibso.chicory.wasm.types.ValType
-import com.dylibso.chicory.wasi.WasiOptions
-import com.dylibso.chicory.wasi.WasiPreview1
+import run.endive.runtime.ByteArrayMemory
+import run.endive.runtime.HostFunction
+import run.endive.runtime.ImportMemory
+import run.endive.runtime.ImportValues
+import run.endive.runtime.Instance
+import run.endive.runtime.Memory
+import run.endive.runtime.WasmFunctionHandle
+import run.endive.wasm.types.ExternalType
+import run.endive.wasm.types.MemoryLimits
+import run.endive.wasm.types.ValType
+import run.endive.wasi.WasiOptions
+import run.endive.wasi.WasiPreview1
 import com.example.wasm.JvmVfsModule
 import com.example.wasm.JvmVfsModule_ModuleExports
 import java.nio.file.Path
@@ -35,7 +35,7 @@ import kotlin.concurrent.write
  * `wasm32-wasi-threads` SQLite + 커스텀 JVM VFS 런타임 (다중 커넥션 WAL).
  *
  * Chicory **AOT** 모듈([JvmVfsModule]) + 컴파일타임 타입드 export 인터페이스
- * ([JvmVfsModule_ModuleExports]) 기반. 공유 linear memory 1개([StatelessBulkMemory])를 모든
+ * ([JvmVfsModule_ModuleExports]) 기반. 공유 linear memory 1개([ByteArrayMemory])를 모든
  * 인스턴스가 공유하며:
  *  - 파일 I/O 는 WASI 위임(RW-락 정책), 락/shm 은 [JvmVfsLocks] + [ShmArena] (JVM 인메모리)로
  *    처리하는 커스텀 VFS(`os_jvm`)
@@ -48,8 +48,11 @@ import kotlin.concurrent.write
  */
 class JvmVfsRuntime(preopens: Map<String, Path> = emptyMap()) : AutoCloseable {
 
-    /** 공유 linear memory — 벌크 연산이 stateless 라 동시 접근 안전 (§9.1 함정 3 해소의 기반). */
-    val mem: Memory = StatelessBulkMemory(ByteBufferMemory(MemoryLimits(INITIAL_PAGES, MAX_PAGES, true)))
+    /**
+     * 공유 linear memory — [ByteArrayMemory] 는 벌크가 원래 절대 인덱스(`System.arraycopy`)라
+     * position 상태가 없어 동시 접근 안전 (§9.1 함정 3 — ByteBufferMemory 한정 레이스라 래퍼 불필요).
+     */
+    val mem: Memory = ByteArrayMemory(MemoryLimits(INITIAL_PAGES, MAX_PAGES, true))
 
     internal val locks = JvmVfsLocks()
     internal val arena = ShmArena(mem)
@@ -132,7 +135,7 @@ class JvmVfsRuntime(preopens: Map<String, Path> = emptyMap()) : AutoCloseable {
 
     /** WASI(RW-락) + thread-spawn 디스패처 + VFS(락/shm) + 공유메모리 import 배선. */
     private fun buildImports(): ImportValues {
-        // i.memory() = StatelessBulkMemory → readCString 이 이미 단건 absolute (§9.1 함정 3 해소)
+        // i.memory() = ByteArrayMemory → readCString 이 이미 단건 absolute (§9.1 함정 3 해소)
         fun cstr(i: Instance, p: Long) = i.memory().readCString(p.toInt())
         fun hf(name: String, np: Int, body: (Instance, LongArray) -> Long) =
             HostFunction("vfs", name, List(np) { ValType.I32 }, listOf(ValType.I32)) { i, a ->
@@ -216,7 +219,7 @@ class JvmVfsRuntime(preopens: Map<String, Path> = emptyMap()) : AutoCloseable {
             },
         )
 
-        // 공유 WASI 1개 + RW-락 정책 (§9.1 — StatelessBulkMemory 가 선행 조건):
+        // 공유 WASI 1개 + RW-락 정책 (§9.1 — stateless 벌크 Memory(ByteArrayMemory)가 선행 조건):
         //  - writeLock: fd table 구조 변형 3종 — path_open(allocate)/fd_close(free)/fd_renumber(free+set)
         //  - readLock: 데이터플레인 fd_*/path_*/sock_*(table 은 get 만) + poll_oneoff(sleep 이 I/O 비차단)
         //  - 무락: clock/random/environ/args/sched_yield — 결과 쓰기도 stateless 벌크라 안전

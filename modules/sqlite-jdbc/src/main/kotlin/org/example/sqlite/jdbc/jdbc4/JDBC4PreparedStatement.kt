@@ -36,8 +36,8 @@ class JDBC4PreparedStatement(conn: SQLiteConnection, sql: String) : JDBC3Prepare
 
     @Throws(SQLException::class)
     override fun setNClob(parameterIndex: Int, value: NClob?) {
-        // TODO Support this
-        throw SQLFeatureNotSupportedException()
+        // SQLite 에 national-character 구분 없음 — Clob 와 동일
+        setClob(parameterIndex, value)
     }
 
     @Throws(SQLException::class)

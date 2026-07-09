@@ -1,15 +1,15 @@
 package org.example.sqlite.core
 
-import com.dylibso.chicory.runtime.ByteBufferMemory
-import com.dylibso.chicory.runtime.HostFunction
-import com.dylibso.chicory.runtime.ImportMemory
-import com.dylibso.chicory.runtime.ImportValues
-import com.dylibso.chicory.runtime.Instance
-import com.dylibso.chicory.wasm.types.ExternalType
-import com.dylibso.chicory.wasm.types.MemoryLimits
-import com.dylibso.chicory.wasm.types.ValType
-import com.dylibso.chicory.wasi.WasiOptions
-import com.dylibso.chicory.wasi.WasiPreview1
+import run.endive.runtime.ByteBufferMemory
+import run.endive.runtime.HostFunction
+import run.endive.runtime.ImportMemory
+import run.endive.runtime.ImportValues
+import run.endive.runtime.Instance
+import run.endive.wasm.types.ExternalType
+import run.endive.wasm.types.MemoryLimits
+import run.endive.wasm.types.ValType
+import run.endive.wasi.WasiOptions
+import run.endive.wasi.WasiPreview1
 import com.example.wasm.JvmVfsModule
 import com.example.wasm.JvmVfsModule_ModuleExports
 import org.junit.jupiter.api.Assertions.assertEquals

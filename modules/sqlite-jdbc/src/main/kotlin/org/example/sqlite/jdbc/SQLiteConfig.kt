@@ -71,7 +71,7 @@ class SQLiteConfig @JvmOverloads constructor(private val pragmaTable: Properties
      */
     @Throws(SQLException::class)
     fun createConnection(url: String): Connection? {
-        return JDBC.createConnection(url, toProperties())
+        return SQLiteDataSource.createConnection(url, toProperties())
     }
 
     /**

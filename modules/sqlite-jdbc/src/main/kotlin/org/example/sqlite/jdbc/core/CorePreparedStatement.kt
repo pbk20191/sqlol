@@ -46,14 +46,14 @@ abstract class CorePreparedStatement protected constructor(conn: SQLiteConnectio
         this.sql = sql
         val db = conn.database
         db.prepare(this)
-        rs.colsMeta = pointer!!.safeRun<Array<String>, SQLException>(SafePtrFunction { obj: DB?, stmt: Long ->
-            obj!!.column_names(stmt)
-        })
+        rs.colsMeta = pointer!!.safeRun<Array<String>> { obj, stmt ->
+            obj.column_names(stmt)
+        }
         columnCount =
-            pointer!!.safeRunInt<SQLException>(SafePtrIntFunction { obj: DB?, stmt: Long -> obj!!.column_count(stmt) })
-        paramCount = pointer!!.safeRunInt<SQLException>(SafePtrIntFunction { obj: DB?, stmt: Long ->
-            obj!!.bind_parameter_count(stmt)
-        })
+            pointer!!.safeRunInt { obj, stmt -> obj.column_count(stmt) }
+        paramCount = pointer!!.safeRunInt { obj, stmt ->
+            obj.bind_parameter_count(stmt)
+        }
         batchQueryCount = 0
         batch = null
         batchPos = 0

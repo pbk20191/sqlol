@@ -135,9 +135,9 @@ abstract class CoreResultSet
     fun checkMeta() {
         checkCol(1)
         if (meta == null) {
-            meta = stmt.pointer!!.safeRun<Array<BooleanArray>, SQLException>(SafePtrFunction { obj: DB?, stmt: Long ->
-                obj!!.column_metadata(stmt)
-            })
+            meta = stmt.pointer!!.safeRun<Array<BooleanArray>> { obj, stmt ->
+                obj.column_metadata(stmt)
+            }
         }
     }
 
@@ -160,7 +160,7 @@ abstract class CoreResultSet
         val db = stmt.database
         synchronized(db) {
             if (!stmt.pointer!!.isClosed()) {
-                stmt.pointer!!.safeRunInt<SQLException>(SafePtrIntFunction { obj: DB?, stmt: Long -> obj!!.reset(stmt) })
+                stmt.pointer!!.safeRunInt { obj, stmt -> obj.reset(stmt) }
 
                 if (closeStmt) {
                     closeStmt = false // break recursive call

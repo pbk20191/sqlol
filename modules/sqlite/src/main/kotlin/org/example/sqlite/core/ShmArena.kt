@@ -1,6 +1,6 @@
 package org.example.sqlite.core
 
-import com.dylibso.chicory.runtime.Memory
+import run.endive.runtime.Memory
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
@@ -23,7 +23,7 @@ internal class ShmArena(private val mem: Memory) {
             if (bExtend == 0) return 0
             val ptr = base + cursor
             cursor += (szRegion + 15) and 0xF.inv()
-            mem.fill(0, ptr, ptr + szRegion)   // StatelessBulkMemory 전제 — fill 도 position 무접촉
+            mem.fill(0, ptr, ptr + szRegion)   // stateless 벌크 Memory 전제 — fill 도 position 무접촉
             regions[key] = ptr
             return ptr
         }

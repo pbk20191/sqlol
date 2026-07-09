@@ -1,5 +1,6 @@
 package org.example.sqlite
 
+import org.example.sqlite.core.JvmVfsRuntime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Test

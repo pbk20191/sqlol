@@ -25,12 +25,21 @@
 package org.example.sqlite.jdbc
 
 import org.example.sqlite.jdbc.SQLiteConfig.*
+import org.example.sqlite.jdbc.core.WorkerDBFactory
 import org.example.sqlite.jdbc.jdbc4.JDBC4Connection
+import java.io.File
+import java.io.IOException
 import java.io.PrintWriter
+import java.net.MalformedURLException
+import java.net.URISyntaxException
+import java.net.URL
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.sql.Connection
 import java.sql.SQLException
 import java.sql.SQLFeatureNotSupportedException
 import java.util.Properties
+import java.util.UUID
 import java.util.logging.Logger
 import javax.sql.DataSource
 
@@ -428,7 +437,7 @@ open class SQLiteDataSource : DataSource {
      * @see DataSource.getConnection
      */
     @Throws(SQLException::class)
-    override fun getConnection(): Connection? {
+    override fun getConnection(): Connection {
         return getConnection(null, null)
     }
 
@@ -436,11 +445,13 @@ open class SQLiteDataSource : DataSource {
      * @see DataSource.getConnection
      */
     @Throws(SQLException::class)
-    override fun getConnection(username: String?, password: String?): SQLiteConnection? {
+    override fun getConnection(username: String?, password: String?): SQLiteConnection {
         val p = config.toProperties()
         if (username != null) p.put("user", username)
         if (password != null) p.put("pass", password)
-        return createConnection(url, p)
+        // DataSource.getConnection 의 null 반환은 계약 위반 (커넥션 풀이 NPE 로 죽는다).
+        // createConnection 은 sqlite URL 이 아닐 때만 null — DataSource 의 url 은 항상 jdbc:sqlite: 이므로 방어.
+        return createConnection(url, p) ?: throw SQLException("invalid database URL: $url")
     }
 
     /**
@@ -501,10 +512,13 @@ open class SQLiteDataSource : DataSource {
      */
     @Throws(SQLException::class)
     override fun <T> unwrap(iface: Class<T?>): T? {
-        return this as T
+        if (iface.isInstance(this)) return iface.cast(this)
+        throw SQLException("${javaClass.name} is not a wrapper for ${iface.name}")
     }
 
     companion object {
+        private const val RESOURCE_NAME_PREFIX = ":resource:"
+
         /**
          * Creates a new database connection to a given URL. This is the single connection-creation
          * entry point; both [JDBC.connect] and [getConnection] delegate here.
@@ -519,7 +533,119 @@ open class SQLiteDataSource : DataSource {
         fun createConnection(url: String, prop: Properties?): SQLiteConnection? {
             if (!JDBC.isValidURL(url)) return null
             val trimmed = url.trim { it <= ' ' }
-            return JDBC4Connection(trimmed, JDBC.extractAddress(trimmed), prop ?: Properties())
+            val db = openDB(trimmed, JDBC.extractAddress(trimmed), prop ?: Properties())
+            try {
+                // JDBC4Connection 생성자 체인(SQLiteConnection.init 의 newConnectionConfig() 포함)도
+                // db.open() 이후 예외 시 열린 WorkerDB 를 닫아야 하므로 try 블록 안에서 생성한다.
+                val conn = JDBC4Connection(db)
+                db.config.apply(conn)
+                conn.currentTransactionMode = db.config.transactionMode
+                conn.isFirstStatementExecuted = false  // apply()가 실행한 PRAGMA는 "첫 문장" 아님
+                return conn
+            } catch (t: Throwable) {
+                try { db.close() } catch (e: Exception) { t.addSuppressed(e) }
+                throw t
+            }
+        }
+
+        @Throws(SQLException::class)
+        private fun openDB(url: String, origFileName: String, props: Properties): org.example.sqlite.jdbc.core.DB {
+            val newProps = Properties().also { it.putAll(props) }
+            var fileName = extractPragmasFromFilename(url, origFileName, newProps)
+            val config = SQLiteConfig(newProps)
+
+            if (fileName.isNotEmpty() &&
+                fileName != ":memory:" &&
+                !fileName.startsWith("file:") &&
+                !fileName.contains("mode=memory")
+            ) {
+                fileName = if (fileName.startsWith(RESOURCE_NAME_PREFIX)) {
+                    val resourceName = fileName.substring(RESOURCE_NAME_PREFIX.length)
+                    val contextCL = Thread.currentThread().contextClassLoader
+                    var resourceAddr = contextCL.getResource(resourceName)
+                    if (resourceAddr == null) {
+                        try {
+                            resourceAddr = URL(resourceName)
+                        } catch (e: MalformedURLException) {
+                            throw SQLException("resource $resourceName not found: $e")
+                        }
+                    }
+                    try {
+                        extractResource(resourceAddr).absolutePath
+                    } catch (e: IOException) {
+                        throw SQLException("failed to load $resourceName: $e")
+                    }
+                } else {
+                    File(fileName).absoluteFile.absolutePath
+                }
+            }
+
+            val isMemory = fileName.isEmpty() || fileName == ":memory:" || fileName.contains("mode=memory")
+            val db = try {
+                WorkerDBFactory.create(url, fileName, config, isMemory)
+            } catch (e: Exception) {
+                throw SQLException("Error opening connection").also { it.initCause(e) }
+            }
+            db.open(fileName, config.openModeFlags)
+            return db
+        }
+
+        @Throws(IOException::class)
+        private fun extractResource(resourceAddr: URL): File {
+            if (resourceAddr.protocol == "file") {
+                try {
+                    return File(resourceAddr.toURI())
+                } catch (e: URISyntaxException) {
+                    throw IOException(e.message)
+                }
+            }
+
+            val tempFolder = File(System.getProperty("java.io.tmpdir")).absolutePath
+            val dbFileName = "sqlite-jdbc-tmp-${UUID.randomUUID()}.db"
+            val dbFile = File(tempFolder, dbFileName)
+
+            if (dbFile.exists()) {
+                val resourceLastModified = resourceAddr.openConnection().lastModified
+                if (resourceLastModified < dbFile.lastModified()) return dbFile
+                if (!dbFile.delete()) throw IOException("failed to remove existing DB file: ${dbFile.absolutePath}")
+            }
+
+            val conn = resourceAddr.openConnection()
+            conn.useCaches = false
+            conn.getInputStream().use { Files.copy(it, dbFile.toPath(), StandardCopyOption.REPLACE_EXISTING) }
+            return dbFile
+        }
+
+        /**
+         * Extracts PRAGMA values from the filename and sets them into the Properties object which
+         * will be used to build the SQLiteConfig. The sanitized filename is returned.
+         */
+        @JvmStatic
+        @Throws(SQLException::class)
+        fun extractPragmasFromFilename(url: String, filename: String, prop: Properties): String {
+            val parameterDelimiter = filename.indexOf('?')
+            if (parameterDelimiter == -1) return filename
+
+            val sb = StringBuilder(filename.substring(0, parameterDelimiter))
+            var nonPragmaCount = 0
+            val parameters = filename.substring(parameterDelimiter + 1).split("&").dropLastWhile { it.isEmpty() }
+            for (i in parameters.indices) {
+                val parameter = parameters[parameters.size - 1 - i].trim()
+                if (parameter.isEmpty()) continue
+
+                val kvp = parameter.split("=").dropLastWhile { it.isEmpty() }
+                val key = kvp[0].trim().lowercase()
+                if (SQLiteConfig.pragmaSet.contains(key)) {
+                    if (kvp.size == 1) throw SQLException("Please specify a value for PRAGMA $key in URL $url")
+                    val value = kvp[1].trim()
+                    if (value.isNotEmpty() && !prop.containsKey(key)) prop.setProperty(key, value)
+                } else {
+                    sb.append(if (nonPragmaCount == 0) '?' else '&')
+                    sb.append(parameter)
+                    nonPragmaCount++
+                }
+            }
+            return sb.toString()
         }
     }
 }

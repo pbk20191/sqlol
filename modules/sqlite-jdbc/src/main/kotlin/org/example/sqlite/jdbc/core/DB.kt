@@ -109,7 +109,7 @@ abstract class DB(@JvmField val url: String, private val fileName: String, @JvmF
      * @see [https://www.sqlite.org/c3ref/errcode.html](https://www.sqlite.org/c3ref/errcode.html)
      */
     @Throws(SQLException::class)
-    abstract fun errmsg(): String?
+    abstract fun errmsg(): String
 
     /**
      * Returns the value for SQLITE_VERSION, SQLITE_VERSION_NUMBER, and SQLITE_SOURCE_ID C
@@ -122,7 +122,7 @@ abstract class DB(@JvmField val url: String, private val fileName: String, @JvmF
      * @see [https://www.sqlite.org/c3ref/c_source_id.html](https://www.sqlite.org/c3ref/c_source_id.html)
      */
     @Throws(SQLException::class)
-    abstract fun libversion(): String?
+    abstract fun libversion(): String
 
     /**
      * @return Number of rows that were changed, inserted or deleted by the last SQL statement
@@ -179,7 +179,7 @@ abstract class DB(@JvmField val url: String, private val fileName: String, @JvmF
     fun exec(sql: String, autoCommit: Boolean) {
         val pointer = prepare(sql)
         try {
-            val rc = pointer.safeRunInt<SQLException>(SafePtrIntFunction { obj: DB?, stmt: Long -> obj!!.step(stmt) })
+            val rc = pointer.safeRunInt { obj, stmt -> obj.step(stmt) }
             when (rc) {
                 Codes.SQLITE_DONE -> {
                     ensureAutoCommit(autoCommit)
@@ -421,7 +421,7 @@ abstract class DB(@JvmField val url: String, private val fileName: String, @JvmF
      * @see [https://www.sqlite.org/c3ref/column_name.html](https://www.sqlite.org/c3ref/column_name.html)
      */
     @Throws(SQLException::class)
-    abstract fun column_name(stmt: Long, col: Int): String?
+    abstract fun column_name(stmt: Long, col: Int): String
 
     /**
      * @param stmt Pointer to the statement.
@@ -867,14 +867,7 @@ abstract class DB(@JvmField val url: String, private val fileName: String, @JvmF
     fun column_names(stmt: Long): Array<String> {
         val count = column_count(stmt)
 
-        return (0..<count).map{
-            column_name(stmt, it)!!
-        }.toTypedArray()
-//        val names: Array<String> = arrayOfNulls<String>(column_count(stmt))
-//        for (i in names.indices) {
-//            names[i] = column_name(stmt, i)!!
-//        }
-//        return names
+        return (0..<count).map { column_name(stmt, it) }.toTypedArray()
     }
 
     /**
@@ -908,10 +901,16 @@ abstract class DB(@JvmField val url: String, private val fileName: String, @JvmF
             return bind_text(stmt, pos, v)
         } else if (v is ByteArray) {
             return bind_blob(stmt, pos, v)
+        } else if (v is SQLiteArray) {
+            return bind_array(stmt, pos, v)
         } else {
             throw SQLException("unexpected param type: " + v.javaClass)
         }
     }
+
+    /** carray 배열 바인딩 ([SQLiteArray] — `carray(?)` 테이블 함수의 포인터 인자). */
+    @Throws(SQLException::class)
+    abstract fun bind_array(stmt: Long, pos: Int, v: SQLiteArray): Int
 
     /**
      * Submits a batch of commands to the database for execution.
@@ -929,14 +928,9 @@ abstract class DB(@JvmField val url: String, private val fileName: String, @JvmF
     fun executeBatch(
         stmt: SafeStmtPtr, count: Int, vals: Array<Any?>?, autoCommit: Boolean
     ): LongArray {
-        return stmt.safeRun<LongArray, SQLException>(SafePtrFunction { db: DB?, ptr: Long ->
-            this.executeBatch(
-                ptr,
-                count,
-                vals,
-                autoCommit
-            )
-        })
+        return stmt.safeRun<LongArray> { _, ptr ->
+            this.executeBatch(ptr, count, vals, autoCommit)
+        }
     }
 
     @Synchronized
@@ -1000,7 +994,7 @@ abstract class DB(@JvmField val url: String, private val fileName: String, @JvmF
     @Throws(SQLException::class)
     fun execute(stmt: CoreStatement, vals: Array<Any?>?): Boolean {
         val statusCode =
-            stmt.pointer!!.safeRunInt<SQLException>(SafePtrIntFunction { db: DB?, ptr: Long -> execute(ptr, vals) })
+            stmt.pointer!!.safeRunInt { _, ptr -> execute(ptr, vals) }
         when (statusCode and 0xFF) {
             Codes.SQLITE_DONE -> {
                 ensureAutoCommit(stmt.conn.getAutoCommit())
@@ -1090,17 +1084,20 @@ abstract class DB(@JvmField val url: String, private val fileName: String, @JvmF
             }
         } finally {
             if (!stmt.pointer!!.isClosed()) {
-                stmt.pointer!!.safeRunInt<SQLException>(SafePtrIntFunction { obj: DB?, stmt: Long -> obj!!.reset(stmt) })
+                stmt.pointer!!.safeRunInt { obj, stmt -> obj.reset(stmt) }
             }
         }
         return changes()
     }
 
+    @Throws(SQLException::class)
     abstract fun set_commit_listener(enabled: Boolean)
 
+    @Throws(SQLException::class)
     abstract fun set_update_listener(enabled: Boolean)
 
     @Synchronized
+    @Throws(SQLException::class)
     fun addUpdateListener(listener: SQLiteUpdateListener) {
         if (updateListeners.add(listener) && updateListeners.size == 1) {
             set_update_listener(true)
@@ -1108,6 +1105,7 @@ abstract class DB(@JvmField val url: String, private val fileName: String, @JvmF
     }
 
     @Synchronized
+    @Throws(SQLException::class)
     fun addCommitListener(listener: SQLiteCommitListener) {
         if (commitListeners.add(listener) && commitListeners.size == 1) {
             set_commit_listener(true)
@@ -1115,6 +1113,7 @@ abstract class DB(@JvmField val url: String, private val fileName: String, @JvmF
     }
 
     @Synchronized
+    @Throws(SQLException::class)
     fun removeUpdateListener(listener: SQLiteUpdateListener) {
         if (updateListeners.remove(listener) && updateListeners.isEmpty()) {
             set_update_listener(false)
@@ -1122,6 +1121,7 @@ abstract class DB(@JvmField val url: String, private val fileName: String, @JvmF
     }
 
     @Synchronized
+    @Throws(SQLException::class)
     fun removeCommitListener(listener: SQLiteCommitListener) {
         if (commitListeners.remove(listener) && commitListeners.isEmpty()) {
             set_commit_listener(false)
@@ -1182,7 +1182,7 @@ abstract class DB(@JvmField val url: String, private val fileName: String, @JvmF
      */
     @Throws(SQLException::class)
     private fun newSQLException(errorCode: Int): SQLiteException {
-        return Companion.newSQLException(errorCode, errmsg()!!)
+        return Companion.newSQLException(errorCode, errmsg())
     }
 
     /**
@@ -1222,11 +1222,9 @@ abstract class DB(@JvmField val url: String, private val fileName: String, @JvmF
 
         ensureBeginAndCommit()
 
-        begin!!.safeRunConsume<SQLException>(
-            SafePtrConsumer { db: DB?, beginPtr: Long ->
-                commit!!.safeRunConsume<SQLException>(
-                    SafePtrConsumer { db2: DB?, commitPtr: Long -> ensureAutocommit(beginPtr, commitPtr) })
-            })
+        begin!!.safeRunConsume { _, beginPtr ->
+            commit!!.safeRunConsume { _, commitPtr -> ensureAutocommit(beginPtr, commitPtr) }
+        }
     }
 
     @Throws(SQLException::class)

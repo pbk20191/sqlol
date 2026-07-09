@@ -3,12 +3,12 @@ package org.example.sqlite.jdbc.jdbc3
 import org.example.sqlite.jdbc.SQLiteConfig
 import org.example.sqlite.jdbc.SQLiteConnection
 import org.example.sqlite.jdbc.SQLiteOpenMode
+import org.example.sqlite.jdbc.core.DB
 import java.sql.*
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
-abstract class JDBC3Connection protected constructor(url: String, fileName: String, prop: Properties) :
-    SQLiteConnection(url, fileName, prop) {
+abstract class JDBC3Connection protected constructor(db: DB) : SQLiteConnection(db) {
     private val savePoint = AtomicInteger(0)
     private var typeMap: Map<String, Class<*>>? = null
 

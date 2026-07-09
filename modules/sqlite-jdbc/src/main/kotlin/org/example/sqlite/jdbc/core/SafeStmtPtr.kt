@@ -72,7 +72,7 @@ class SafeStmtPtr(
      * @throws SQLException if the pointer is utilized elsewhere
      */
     @Throws(SQLException::class)
-    fun <E : Throwable> safeRunInt(run: SafePtrIntFunction<E>): Int {
+    fun safeRunInt(run: SafePtrIntFunction): Int {
         synchronized(db) {
             this.ensureOpen()
             return run.run(db, ptr.toLong())
@@ -87,7 +87,7 @@ class SafeStmtPtr(
      * @throws SQLException if the pointer is utilized elsewhere
      */
     @Throws(SQLException::class)
-    fun <E : Throwable> safeRunLong(run: SafePtrLongFunction<E>): Long {
+    fun safeRunLong(run: SafePtrLongFunction): Long {
         synchronized(db) {
             this.ensureOpen()
             return run.run(db, ptr.toLong())
@@ -102,7 +102,7 @@ class SafeStmtPtr(
      * @throws SQLException if the pointer is utilized elsewhere
      */
     @Throws(SQLException::class)
-    fun <E : Throwable> safeRunDouble(run: SafePtrDoubleFunction<E>): Double {
+    fun safeRunDouble(run: SafePtrDoubleFunction): Double {
         synchronized(db) {
             this.ensureOpen()
             return run.run(db, ptr.toLong())
@@ -117,7 +117,7 @@ class SafeStmtPtr(
      * @throws SQLException if the pointer is utilized elsewhere
      */
     @Throws(SQLException::class)
-    fun <T, E : Throwable> safeRun(run: SafePtrFunction<T, E>): T {
+    fun <T> safeRun(run: SafePtrFunction<T>): T {
         synchronized(db) {
             this.ensureOpen()
             return run.run(db, ptr.toLong())
@@ -131,7 +131,7 @@ class SafeStmtPtr(
      * @throws SQLException if the pointer is utilized elsewhere
      */
     @Throws(SQLException::class)
-    fun <E : Throwable> safeRunConsume(run: SafePtrConsumer<E>) {
+    fun safeRunConsume(run: SafePtrConsumer) {
         synchronized(db) {
             this.ensureOpen()
             run.run(db, ptr.toLong())
@@ -156,28 +156,30 @@ class SafeStmtPtr(
         return ptr.toLong().hashCode()
     }
 
-    fun interface SafePtrIntFunction<E : Throwable> {
-        @Throws(Throwable::class)
+    // J2K 잔재였던 <E : Throwable> 타입 파라미터 제거 — E 는 어디서도 바운드로 쓰이지 않았고
+    // 호출부마다 무의미한 <SQLException> 표기와 nullable DB? 람다 시그니처만 유발했다.
+    fun interface SafePtrIntFunction {
+        @Throws(SQLException::class)
         fun run(db: DB, ptr: Long): Int
     }
 
-    fun interface SafePtrLongFunction<E : Throwable> {
-        @Throws(Throwable::class)
+    fun interface SafePtrLongFunction {
+        @Throws(SQLException::class)
         fun run(db: DB, ptr: Long): Long
     }
 
-    fun interface SafePtrDoubleFunction<E : Throwable> {
-        @Throws(Throwable::class)
+    fun interface SafePtrDoubleFunction {
+        @Throws(SQLException::class)
         fun run(db: DB, ptr: Long): Double
     }
 
-    fun interface SafePtrFunction<T, E : Throwable> {
-        @Throws(Throwable::class)
+    fun interface SafePtrFunction<T> {
+        @Throws(SQLException::class)
         fun run(db: DB, ptr: Long): T
     }
 
-    fun interface SafePtrConsumer<E : Throwable> {
-        @Throws(Throwable::class)
+    fun interface SafePtrConsumer {
+        @Throws(SQLException::class)
         fun run(db: DB, ptr: Long)
     }
 }

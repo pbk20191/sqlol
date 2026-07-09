@@ -1,6 +1,6 @@
 package org.example.sqlite.core
 
-import com.dylibso.chicory.runtime.Memory
+import run.endive.runtime.Memory
 import com.example.wasm.JvmVfsModule_ModuleExports
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
@@ -61,8 +61,9 @@ internal class SqliteWorker private constructor(
         private const val SQL_BUF = 4096
         private const val STMT_CACHE = 64
 
-        /** sqlite 특수 소멸자 ((void*)-1) — bind 호출 중에 값을 복사하라는 지시. 스크래치 즉시 재사용 가능. */
-        private const val SQLITE_TRANSIENT = -1
+        /** BUSY(5)/PROTOCOL(15) 재시도 정책 — 총 ~1s (200 × 5ms) 소진 시 rc 보존 예외. */
+        private const val BUSY_MAX_RETRIES = 200
+        private const val BUSY_RETRY_SLEEP_MS = 5L
 
         /** SQLITE_OPEN_READWRITE(2) or SQLITE_OPEN_CREATE(4) — sqlite3_open 과 동등한 기본. */
         const val OPEN_DEFAULT = 6
@@ -104,11 +105,11 @@ internal class SqliteWorker private constructor(
      * 클로저용 표면: 고수준 [run]/[exec]/[query] + 저수준 [x]/[mem]/[db]/[sqlPtr]
      * (향후 바인딩/ResultSet 이 prepare→bind→step→column 을 여기서 조립).
      *
-     * 공유메모리 접근은 [StatelessBulkMemory] 전제로 벌크 사용 가능 (§9.1 함정 3 — position 레이스는
-     * Memory 구현에서 근원 해소). SQL/포인터 슬롯은 생성 시 1회 할당하는 고정 버퍼 재사용 —
+     * 공유메모리 접근은 stateless 벌크 Memory(ByteArrayMemory) 전제로 벌크 사용 가능 (§9.1 함정 3 —
+     * position 레이스는 Memory 구현에서 근원 해소). SQL/포인터 슬롯은 생성 시 1회 할당하는 고정 버퍼 재사용 —
      * 부하 중 JVM 발 malloc 0.
      */
-    internal class Session(
+    internal class Session constructor(
         val x: JvmVfsModule_ModuleExports,
         val mem: Memory,
         guestPath: String,
@@ -224,22 +225,38 @@ internal class SqliteWorker private constructor(
         fun query(sql: String, params: List<Any?> = emptyList()): SqlResult {
             val st = stmts[sql] ?: run {
                 val prc = x.sqlite3PrepareV2(db, sqlPtr(sql), -1, pp, 0)
-                val st = mem.readInt(pp)
-                if (prc != 0 || st == 0) return SqlResult(prc, 0L, errmsg(prc))
-                stmts[sql] = st
-                st
+                val fresh = mem.readInt(pp)
+                if (prc != SQLITE_OK || fresh == 0) return SqlResult(prc, 0L, errmsg(prc))
+                stmts[sql] = fresh
+                fresh
             }
             return try {
                 bindAll(st, params)
-                when (val src = x.sqlite3Step(st)) {
-                    100 -> SqlResult(0, x.sqlite3ColumnInt64(st, 0), mem.readCString(x.sqlite3ColumnText(st, 0)))
-                    101 -> SqlResult(0, 0L, "")
-                    else -> SqlResult(src, 0L, errmsg(src))
-                }
+                stepCapture(st)
             } finally {
                 x.sqlite3Reset(st)   // finalize 대신 reset — 다음 사용을 위해 보존
                 if (params.isNotEmpty()) x.sqlite3ClearBindings(st)
             }
+        }
+
+        /** step 1회 + 첫 행 첫 컬럼 캡처 — [query]/[runUser] 공용 (행 없으면 0L/""). */
+        private fun stepCapture(st: Int): SqlResult = when (val src = x.sqlite3Step(st)) {
+            SQLITE_ROW -> SqlResult(0, x.sqlite3ColumnInt64(st, 0), mem.readCString(x.sqlite3ColumnText(st, 0)))
+            SQLITE_DONE -> SqlResult(0, 0L, "")
+            else -> SqlResult(src, 0L, errmsg(src))
+        }
+
+        /**
+         * 일시적 rc(BUSY/PROTOCOL) 재시도 루프 — [attempt] 가 null 을 반환하면 잠깐 재운 뒤 재시도.
+         * 소진 시 rc 보존 [SqliteNativeException] (JDBC 가 SQLITE_BUSY 로 매핑 가능 —
+         * 프로그래밍 오류가 아니라 런타임 경합 고갈이므로 IllegalStateException 이 아니다).
+         */
+        private inline fun <T : Any> retryBusy(what: String, attempt: () -> T?): T {
+            repeat(BUSY_MAX_RETRIES) {
+                attempt()?.let { return it }
+                Thread.sleep(BUSY_RETRY_SLEEP_MS)
+            }
+            throw SqliteNativeException(SQLITE_BUSY, "BUSY/PROTOCOL 지속: $what")
         }
 
         /** rc!=0 일 때 진단 메시지 (정상 경로 비용 0). */
@@ -255,13 +272,10 @@ internal class SqliteWorker private constructor(
             // 다중 문장(';')은 prepare 가 첫 문장만 보므로 sqlite3_exec 폴백 — 단 바인딩은 stmt 전용이라
             // params 가 있으면 무조건 stmt 경로 (다중 문장+바인딩 조합은 비지원: 첫 문장만 실행됨).
             val cacheable = isQuery || params.isNotEmpty() || !sql.contains(';')
-            repeat(200) {
-                val r = if (cacheable) query(sql, params)
-                        else SqlResult(exec(sql), 0L, "")
-                if (r.rc != 5 && r.rc != 15) return r
-                Thread.sleep(5)
+            return retryBusy(sql) {
+                val r = if (cacheable) query(sql, params) else SqlResult(exec(sql), 0L, "")
+                if (r.rc == SQLITE_BUSY || r.rc == SQLITE_PROTOCOL) null else r
             }
-            error("BUSY/PROTOCOL 지속: $sql")
         }
 
         /**
@@ -276,61 +290,53 @@ internal class SqliteWorker private constructor(
             val rows = ArrayList<SqliteRow>()
             while (true) {
                 when (val src = x.sqlite3Step(st)) {
-                    100 -> rows += SqliteRow(cols, Array(n) { i ->
+                    SQLITE_ROW -> rows += SqliteRow(cols, Array(n) { i ->
                         when (x.sqlite3ColumnType(st, i)) {
-                            1 -> x.sqlite3ColumnInt64(st, i)
-                            2 -> x.sqlite3ColumnDouble(st, i)
+                            TYPE_INTEGER -> x.sqlite3ColumnInt64(st, i)
+                            TYPE_FLOAT -> x.sqlite3ColumnDouble(st, i)
                             // column_bytes 는 column_text/blob **뒤에** 호출 (sqlite 규약 — 변환 후 길이)
-                            3 -> mem.readString(x.sqlite3ColumnText(st, i), x.sqlite3ColumnBytes(st, i))
-                            4 -> mem.readBytes(x.sqlite3ColumnBlob(st, i), x.sqlite3ColumnBytes(st, i))
-                            else -> null   // 5 = NULL
+                            TYPE_TEXT -> mem.readString(x.sqlite3ColumnText(st, i), x.sqlite3ColumnBytes(st, i))
+                            TYPE_BLOB -> mem.readBytes(x.sqlite3ColumnBlob(st, i), x.sqlite3ColumnBytes(st, i))
+                            else -> null   // TYPE_NULL
                         }
                     })
-                    101 -> return rows
-                    5, 15 -> return null
+                    SQLITE_DONE -> return rows
+                    SQLITE_BUSY, SQLITE_PROTOCOL -> return null
                     else -> error("query rc=$src (${errmsg(src)})")
                 }
             }
         }
 
         /** 다중 행/열 SELECT — LRU 캐시 stmt + 바인딩 + 전 행 materialize. 오류는 예외 (rc 채널 없음). */
-        fun queryRows(sql: String, params: List<Any?> = emptyList()): List<SqliteRow> {
-            repeat(200) {
-                val st = stmts[sql] ?: run {
-                    val prc = x.sqlite3PrepareV2(db, sqlPtr(sql), -1, pp, 0)
-                    val st2 = mem.readInt(pp)
-                    if (prc == 5 || prc == 15) { Thread.sleep(5); return@repeat }
-                    check(prc == 0 && st2 != 0) { "prepare rc=$prc (${errmsg(prc)}): $sql" }
-                    stmts[sql] = st2
-                    st2
-                }
-                val rows = try {
-                    bindAll(st, params)
-                    decodeRows(st)
-                } finally {
-                    x.sqlite3Reset(st)
-                    if (params.isNotEmpty()) x.sqlite3ClearBindings(st)
-                }
-                if (rows != null) return rows
-                Thread.sleep(5)
+        fun queryRows(sql: String, params: List<Any?> = emptyList()): List<SqliteRow> = retryBusy(sql) {
+            val st = stmts[sql] ?: run {
+                val prc = x.sqlite3PrepareV2(db, sqlPtr(sql), -1, pp, 0)
+                val fresh = mem.readInt(pp)
+                if (prc == SQLITE_BUSY || prc == SQLITE_PROTOCOL) return@retryBusy null
+                check(prc == SQLITE_OK && fresh != 0) { "prepare rc=$prc (${errmsg(prc)}): $sql" }
+                stmts[sql] = fresh
+                fresh
             }
-            error("BUSY/PROTOCOL 지속: $sql")
+            try {
+                bindAll(st, params)
+                decodeRows(st)
+            } finally {
+                x.sqlite3Reset(st)
+                if (params.isNotEmpty()) x.sqlite3ClearBindings(st)
+            }
         }
 
         /** 사용자 stmt 다중 행 — [runUser] 의 rows 버전 (재시도/재바인딩 시맨틱 동일). */
         fun runUserRows(st: Int, params: List<Any?>): List<SqliteRow> {
             check(st in userStmts) { "닫혔거나 이 워커 소유가 아닌 stmt" }
-            repeat(200) {
-                val rows = try {
+            return retryBusy("user stmt") {
+                try {
                     bindAll(st, params)
                     decodeRows(st)
                 } finally {
                     x.sqlite3Reset(st)
                 }
-                if (rows != null) return rows
-                Thread.sleep(5)
             }
-            error("BUSY/PROTOCOL 지속 (user stmt)")
         }
 
         /** 사용자 stmt prepare (캐시 밖, registry 등록). @return (stmt, ?-파라미터 개수) */
@@ -357,21 +363,15 @@ internal class SqliteWorker private constructor(
          */
         fun runUser(st: Int, params: List<Any?>, isQuery: Boolean): SqlResult {
             check(st in userStmts) { "닫혔거나 이 워커 소유가 아닌 stmt" }
-            repeat(200) {
+            return retryBusy("user stmt") {
                 val r = try {
                     bindAll(st, params)
-                    when (val src = x.sqlite3Step(st)) {
-                        100 -> SqlResult(0, x.sqlite3ColumnInt64(st, 0), mem.readCString(x.sqlite3ColumnText(st, 0)))
-                        101 -> SqlResult(0, 0L, "")
-                        else -> SqlResult(src, 0L, errmsg(src))
-                    }
+                    stepCapture(st)
                 } finally {
                     x.sqlite3Reset(st)
                 }
-                if (r.rc != 5 && r.rc != 15) return r
-                Thread.sleep(5)
+                if (r.rc == SQLITE_BUSY || r.rc == SQLITE_PROTOCOL) null else r
             }
-            error("BUSY/PROTOCOL 지속 (user stmt)")
         }
     }
 }

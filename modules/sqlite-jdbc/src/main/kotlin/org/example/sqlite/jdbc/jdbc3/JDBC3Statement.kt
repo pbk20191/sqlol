@@ -193,19 +193,15 @@ protected constructor(conn: SQLiteConnection) : CoreStatement(conn) {
                 throw SQLException("ResultSet already requested")
             }
 
-            if (pointer!!.safeRunInt<SQLException>(SafePtrIntFunction { obj: DB?, stmt: Long ->
-                    obj!!.column_count(
-                        stmt
-                    )
-                }) == 0) {
+            if (pointer!!.safeRunInt { obj, stmt -> obj.column_count(stmt) } == 0) {
                 return null
             }
 
             if (rs.colsMeta == null) {
                 rs.colsMeta =
-                    pointer!!.safeRun<Array<String>, SQLException>(SafePtrFunction { obj: DB?, stmt: Long ->
-                        obj!!.column_names(stmt)
-                    })
+                    pointer!!.safeRun<Array<String>> { obj, stmt ->
+                        obj.column_names(stmt)
+                    }
             }
 
             rs.cols = rs.colsMeta
@@ -236,8 +232,8 @@ protected constructor(conn: SQLiteConnection) : CoreStatement(conn) {
     @Throws(SQLException::class)
     open fun getLargeUpdateCount(): Long {
             val db = conn.database
-            if (!pointer!!.isClosed() && !rs.isOpen() && !resultsWaiting && pointer!!.safeRunInt<SQLException>(
-                    SafePtrIntFunction { obj: DB?, stmt: Long -> obj!!.column_count(stmt) }) == 0
+            if (!pointer!!.isClosed() && !rs.isOpen() && !resultsWaiting &&
+                pointer!!.safeRunInt { obj, stmt -> obj.column_count(stmt) } == 0
             ) return updateCount
             return -1
         }

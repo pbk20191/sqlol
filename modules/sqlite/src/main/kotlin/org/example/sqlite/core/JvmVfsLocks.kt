@@ -1,7 +1,6 @@
 package org.example.sqlite.core
 
 import com.example.wasm.JvmVfsModule_Vfs
-import java.nio.channels.FileLock
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -15,6 +14,7 @@ internal class JvmVfsLocks  {
     companion object {
         const val OK = 0
         const val BUSY = 5
+        const val MISUSE = 21   // SQLITE_MISUSE — 규약 밖 인자 (예외 대신 rc — 호스트 함수에서 던지기 금지)
 
         // 파일 락 레벨
         const val NONE = 0
@@ -48,11 +48,9 @@ internal class JvmVfsLocks  {
     private fun fileState(name: String) = files.getOrPut(name) { FileState() }
     private fun shmState(name: String) = shms.getOrPut(name) { ShmState() }
 
-        // ---- 파일 락 ----
+    // ---- 파일 락 ----
     fun lock(conn: Int, name: String, target: Int): Int {
         val st = fileState(name)
-            FileLock::acquiredBy
-//        ConcurrentHashMap<String, FileState>().getOrPut()
         st.lock.withLock {
             val cur = st.levels[conn] ?: NONE
             if (cur >= target) return OK
@@ -91,6 +89,9 @@ internal class JvmVfsLocks  {
 
     // ---- shm 락 (offset..offset+n-1 슬롯) ----
     fun shmLock(conn: Int, name: String, offset: Int, n: Int, flags: Int): Int {
+        // wasm 호스트 함수 경로 — Java 예외가 wasm 을 관통하면 안 되므로 (BUILD.md 불변식 3)
+        // 범위 밖 요청은 AIOOBE 가 아니라 SQLITE_MISUSE 로 반환한다 (ABI 회귀 감시 겸용).
+        if (offset < 0 || n < 1 || offset + n > SHM_NLOCK) return MISUSE
         val st = shmState(name)
         val slots = offset until (offset + n)
         st.lock.withLock {

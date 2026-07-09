@@ -1,7 +1,7 @@
 package org.example.sqlite.core
 
-import com.dylibso.chicory.runtime.ByteBufferMemory
-import com.dylibso.chicory.wasm.types.MemoryLimits
+import run.endive.runtime.ByteBufferMemory
+import run.endive.wasm.types.MemoryLimits
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.test.Test

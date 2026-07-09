@@ -12,7 +12,7 @@ import java.util.concurrent.Future
  *
  * 핵심 검증: (1) 그때그때 spawn 되는 커넥션 수명주기, (2) 동시 getConnection (내부 spawn 직렬화),
  * (3) **다중 커넥션 동시 writer** — WAL write 락(JvmVfsLocks=JVM 락) + busy 재시도가 직렬화를 담당.
- * (과거 "다중 writer 커밋 유실" 경고는 함정 3 진단 전 측정 — StatelessBulkMemory 이후 재판정)
+ * (과거 "다중 writer 커밋 유실" 경고는 함정 3 진단 전 측정 — stateless 벌크 Memory 이후 재판정)
  */
 class SqliteDataSourceTest {
 

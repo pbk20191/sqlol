@@ -1,16 +1,16 @@
 package org.example.sqlite.core
 
-import com.dylibso.chicory.runtime.ByteBufferMemory
-import com.dylibso.chicory.runtime.HostFunction
-import com.dylibso.chicory.runtime.ImportMemory
-import com.dylibso.chicory.runtime.ImportValues
-import com.dylibso.chicory.runtime.Instance
-import com.dylibso.chicory.runtime.Memory
-import com.dylibso.chicory.wasm.Parser
-import com.dylibso.chicory.wasm.types.MemoryLimits
-import com.dylibso.chicory.wasm.types.ValType
-import com.dylibso.chicory.wasi.WasiOptions
-import com.dylibso.chicory.wasi.WasiPreview1
+import run.endive.runtime.ByteBufferMemory
+import run.endive.runtime.HostFunction
+import run.endive.runtime.ImportMemory
+import run.endive.runtime.ImportValues
+import run.endive.runtime.Instance
+import run.endive.runtime.Memory
+import run.endive.wasm.Parser
+import run.endive.wasm.types.MemoryLimits
+import run.endive.wasm.types.ValType
+import run.endive.wasi.WasiOptions
+import run.endive.wasi.WasiPreview1
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
